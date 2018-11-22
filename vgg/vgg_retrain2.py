@@ -13,9 +13,12 @@ validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_s
 top_model_weights_path = 'vgg16_weights.h5'
 
 nb_train_samples = 8590
-nb_validation_samples = 1135
-epochs = 50
-batch_size = 16
+nb_validation_samples = 1130
+#nb_train_samples = 16
+#nb_validation_samples = 16
+
+epochs = 100
+batch_size = 10
 
 
 def save_bottlebeck_features():
@@ -31,14 +34,11 @@ def save_bottlebeck_features():
         class_mode=None,
         shuffle=False)
 
-    print(nb_train_samples, batch_size)
     bottleneck_features_train = model.predict_generator(generator, int(nb_train_samples/10))
     #bottleneck_features_train = model.predict_generator(generator)
-    print('im here')
-    print(len(generator))
-    generatore = open('bottleneck_features_train.npy', mode='w')
-    np.save(generatore, bottleneck_features_train)
-    loaded = np.load(open(file_name, 'wb'))
+    #generatore = open('bottleneck_features_train.npy', mode='w')
+    generatore = open('bottleneck_fc_model.h5', mode='w')
+    np.save('bottleneck_features_train.npy', bottleneck_features_train)
 
     generator = datagen.flow_from_directory(
         validation_data_dir,
@@ -47,17 +47,22 @@ def save_bottlebeck_features():
         class_mode=None,
         shuffle=False)
     bottleneck_features_validation = model.predict_generator(generator, nb_validation_samples // batch_size)
-    #np.save(open('bottleneck_features_validation.npy', 'w'), bottleneck_features_validation)
+    np.save('bottleneck_features_validation.npy', bottleneck_features_validation)
 
 
 def train_top_model():
-    train_data = np.load(open('bottleneck_features_train.npy'))
-    train_labels = np.array(
-        [0] * (nb_train_samples / 2) + [1] * (nb_train_samples / 2))
+    #arr = open('bottleneck_features_train.npy')
+    #print(type(arr))
+    #with open(arr, 'rb') as f:
+    #    train_data = f.read()
 
-    validation_data = np.load(open('bottleneck_features_validation.npy'))
+    train_data = np.load('bottleneck_features_train.npy')
+    train_labels = np.array([0] * (nb_train_samples // 2) + [1] * (nb_train_samples // 2))
+
+    #validation_data = np.load(open('bottleneck_features_validation.npy'))
+    validation_data = np.load('bottleneck_features_validation.npy')
     validation_labels = np.array(
-        [0] * (nb_validation_samples / 2) + [1] * (nb_validation_samples / 2))
+        [0] * (nb_validation_samples // 2) + [1] * (nb_validation_samples // 2))
 
     model = Sequential()
     model.add(Flatten(input_shape=train_data.shape[1:]))
@@ -75,5 +80,10 @@ def train_top_model():
     model.save_weights(top_model_weights_path)
 
 
-save_bottlebeck_features()
-train_top_model()
+def main():
+    save_bottlebeck_features()
+    train_top_model()
+
+
+if __name__ == '__main__':
+    main()
