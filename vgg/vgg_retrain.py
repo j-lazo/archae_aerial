@@ -12,6 +12,11 @@ from sklearn.model_selection import train_test_split
 X, y = make_classification(n_samples=8590)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
 
+
+def load_labels(file):
+    return np.loadtxt(file, usecols=0)
+
+
 def binary_pred_stats(ytrue, ypred, threshold=0.5):
     one_correct = np.sum((ytrue==1)*(ypred > threshold))
     zero_correct = np.sum((ytrue==0)*(ypred <= threshold))
@@ -28,7 +33,8 @@ validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_s
 nb_train_samples = 8590
 nb_validation_samples = 1135
 epochs = 50
-batch_size = 16
+#batch_size = 16
+batch_size = 20
 
 if K.image_data_format() == 'channels_first':
     input_shape = (3, img_width, img_height)
@@ -73,8 +79,11 @@ train_generator = train_datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='binary')
 
-keras_model = model.fit(X_train, y_train)
+ytrain = load_labels(base + "Trn_trg.csv")
+ytest = load_labels(base + "Tst_trg.csv")
 
+np.loadtxt(path_csv, usecols=0)
+keras_model = model.fit(X_train, y_train)
 
 validation_generator = test_datagen.flow_from_directory(
     validation_data_dir,
@@ -106,16 +115,26 @@ y_pred_rf = rf.predict_proba(X_test)[:, 1]
 fpr_rf, tpr_rf, thresholds_rf = roc_curve(y_test, y_pred_rf)
 auc_rf = auc(fpr_rf, tpr_rf)
 
-
-
 print('here we go... ')
 
-plt.plot(estimator.history['loss'])
-plt.title('Model training')
+
+plt.plot(estimator.history['loss'], label='train')
+plt.plot(estimator.history['val_loss'], label='validation')
+plt.title('Loss')
 plt.ylabel('training error')
 plt.xlabel('epoch')
-plt.legend(['train'], loc=0)
+plt.legend(['train'], loc='best')
+
+plt.plot(estimator.history['acc'], label='train')
+plt.plot(estimator.history['val_acc'], label='validation')
+plt.title('Accuracy')
+plt.ylabel('training error')
+plt.xlabel('epoch')
+plt.legend(['train'], loc='best')
+
 plt.show()
+
+
 
 
 
