@@ -12,8 +12,10 @@ from sklearn.metrics import roc_curve
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from skimage import transform
+from keras.optimizers import SGD, Adam, RMSprop, Nadam
 
-base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/Test2/images/'
+
+base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
 
 X, y = make_classification(n_samples=8590)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
@@ -93,6 +95,8 @@ if K.image_data_format() == 'channels_first':
 else:
     input_shape = (img_width, img_height, 3)
 
+####### is this ok????????????????
+
 model = Sequential()
 model.add(Conv2D(128, (3, 3), input_shape=input_shape))
 model.add(Activation('relu'))
@@ -113,9 +117,13 @@ model.add(Dropout(0.5))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
+adam = Adam(lr=0.005)
+
 model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
+              optimizer=adam,
               metrics=['accuracy'])
+
+##################################
 
 # this is the augmentation configuration we will use for training
 train_datagen = ImageDataGenerator(horizontal_flip=True)
