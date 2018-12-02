@@ -40,7 +40,7 @@ def load_pictures(directory):
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i + len(lista1)] = img
         else:
-            img = transform.resize(img, (100,100,3))
+            img = transform.resize(img, (100, 100, 3))
             imgs[i + len(lista1)] = img
 
 
@@ -180,7 +180,7 @@ plt.show()
 #--------------form here it is to predict the roc curve..... --------------------------
 
 ytrain = load_labels(base + "imgTrn.csv")
-ytest = load_labels(base + "imgVal.csv")
+y_test = load_labels(base + "imgVal.csv")
 
 print(len(ytest), len(ytrain))
 X_train = load_pictures(train_data_dir)
