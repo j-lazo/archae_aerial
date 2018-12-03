@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import keras
+import csv
 import matplotlib.pyplot as plt
 from keras.layers import Dense,GlobalAveragePooling2D
 from keras.applications import VGG16
@@ -14,10 +15,21 @@ from keras.layers import Activation, Dropout, Flatten, Dense
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.layers import Input
+from sklearn.metrics import roc_curve
+
+from scipy import misc
+from sklearn.metrics import roc_curve
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from skimage import transform
+from keras.optimizers import SGD, Adam, RMSprop, Nadam
+
 
 
 train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/training'
 validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/validation'
+
+
 
 
 input_tensor = Input(shape=(100, 100, 3))
@@ -43,20 +55,85 @@ x = Dropout(0.5)(x)
 x = Dense(2, activation='softmax')(x)
 
 # Creating new model. Please note that this is NOT a Sequential() model.
-from keras.models import Model
+
+def load_labels(csv_file):
+    labels = []
+    with open(csv_file, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            labels.append(int(row[0]))
+
+    return labels
+
+
+def load_pictures_1(directory):
+    directory = directory + '/'
+    lista = [f for f in os.listdir(directory)]
+    imgs = np.zeros([len(lista), 100, 100, 3])
+
+    for i, image in enumerate(lista):
+        img = misc.imread(''.join([directory, image]))
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            print(np.shape(img), image)
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    # return np.array(imgs[:])
+    return array
+
+
+def load_pictures(directory):
+
+    names = []
+    lista1 = [f for f in os.listdir(directory + '/positives/')]
+    lista2 = [f for f in os.listdir(directory + '/negatives/')]
+    imgs = np.zeros([len(lista1) + len(lista2), 100, 100, 3])
+
+    for i, image in enumerate(lista1):
+        img = misc.imread(''.join([directory, '/positives/', image]))
+        names.append(image)
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    for i, image in enumerate(lista2):
+        img = misc.imread(''.join([directory, '/negatives/', image]))
+        names.append(image)
+
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i + len(lista1)] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i + len(lista1)] = img
+
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    #return np.array(imgs[:])
+    return array, names
+
 custom_model = Model(input=vgg_model.input, output=x)
 
 # Make sure that the pre-trained bottom layers are not trainable
 for layer in custom_model.layers[:7]:
     layer.trainable = False
 
+adam = Adam(lr=0.001)
+
 # Do not forget to compile it
 custom_model.compile(loss='categorical_crossentropy',
-                     optimizer='rmsprop',
+                     optimizer=adam,
                      metrics=['accuracy'])
 
 
 train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 #included in our dependencies
 
 train_generator = train_datagen.flow_from_directory(train_data_dir,
@@ -66,28 +143,100 @@ train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
+validation_generator = test_datagen.flow_from_directory(validation_data_dir,
+                                                 target_size=(100, 100),
+                                                 color_mode='rgb',
+                                                 batch_size=20,
+                                                 class_mode='categorical',
+                                                  shuffle=True)
+
 step_size_train = train_generator.n//train_generator.batch_size
 
 
-estimator = custom_model.fit_generator(generator=train_generator, steps_per_epoch=step_size_train, epochs=10)
+nb_validation_samples = 100
+batch_size = 20
+
+estimator = custom_model.fit_generator(generator=train_generator,
+                                       steps_per_epoch=step_size_train,
+                                       validation_data=validation_generator,
+                                       validation_steps=nb_validation_samples // batch_size,
+                                       epochs=1)
 
 print(estimator.__dict__.keys())
 plt.figure()
-plt.plot(estimator.history['acc'], label='train')
-plt.plot(estimator.history['val_acc'], label='validation')
+plt.plot(estimator.history['acc'], 'o-', label='train')
+plt.plot(estimator.history['val_acc'], 'o-', label='validation')
 plt.title('Accuracy')
 plt.ylabel('training error')
 plt.xlabel('epoch')
 plt.legend(loc='best')
 plt.show()
 
-print(estimator.__dict__)
-print(estimator.history.__dict__.keys())
-
 plt.figure()
-plt.plot(estimator.history['val_loss'], label='validation')
+plt.plot(estimator.history['loss'], 'o-', label='train')
+plt.plot(estimator.history['val_loss'], 'o-', label='validation')
 plt.title('Loss')
 plt.ylabel('training error')
 plt.xlabel('epoch')
+plt.legend(loc='best')
+plt.show()
+
+
+
+
+
+base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
+
+
+#print(y_pred_keras)
+
+#with open('Predictions.csv', 'w') as csvfile:
+#    writer = csv.writer(csvfile, delimiter=',')
+#    for i, element in enumerate(y_pred_keras[:200]):
+#        #writer.writerow([element, name_pictures[i]])
+
+
+"""print(np.shape(X_test))
+print(type(y_pred_keras))
+print(np.shape(y_pred_keras))
+print(y_pred_keras)
+print('predictions done')
+
+print(np.shape(y_test))
+print(y_test)
+print('before roc')
+print(np.shape(y_test[:869]))
+print(np.shape(y_pred_keras[:869]))"""
+
+
+test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/Hjortahammar/All'
+X_test = load_pictures_1(test_dataset)
+y_pred_keras = custom_model.predict(X_test).ravel()
+
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test[:200], y_pred_keras[:200])
+y_test = load_labels('Reals.csv')
+
+from sklearn.metrics import auc
+auc_keras = auc(fpr_keras, tpr_keras)
+
+plt.figure()
+plt.plot([0, 1], [0, 1], 'k--')
+plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve')
+plt.legend(loc='best')
+
+# Zoom in view of the upper left corner.
+plt.figure()
+plt.xlim(0, 0.2)
+plt.ylim(0.8, 1)
+plt.plot([0, 1], [0, 1], 'k--')
+plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve (zoomed in at top left)')
 plt.legend(loc='best')
 plt.show()
