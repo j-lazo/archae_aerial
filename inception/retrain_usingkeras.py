@@ -149,7 +149,7 @@ nb_validation_samples = 200
 batch_size = 20
 
 
-inception_transfer.save_weights('inceptio_weigths', True)
+inception_transfer.save_weights('inception_weigths', True)
             
 
 estimator = inception_transfer.fit_generator(generator=train_generator,
