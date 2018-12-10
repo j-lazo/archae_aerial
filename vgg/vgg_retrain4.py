@@ -23,13 +23,10 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
+import csv
 
-
-
-train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/training'
-validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/validation'
-
-
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
 
 
 input_tensor = Input(shape=(100, 100, 3))
@@ -103,6 +100,7 @@ def load_pictures(directory):
             imgs[i] = img
 
     for i, image in enumerate(lista2):
+
         img = misc.imread(''.join([directory, '/negatives/', image]))
         names.append(image)
 
@@ -139,14 +137,14 @@ test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=20,
+                                                 batch_size=100,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 validation_generator = test_datagen.flow_from_directory(validation_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=20,
+                                                 batch_size=100,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
@@ -156,34 +154,48 @@ step_size_train = train_generator.n//train_generator.batch_size
 nb_validation_samples = 100
 batch_size = 20
 
+
+custom_model.save_weights('v_gg_weigths', True)
+            
+
 estimator = custom_model.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
                                        validation_steps=nb_validation_samples // batch_size,
-                                       epochs=1)
+                                       epochs=50)
 
 print(estimator.__dict__.keys())
-plt.figure()
-plt.plot(estimator.history['acc'], 'o-', label='train')
-plt.plot(estimator.history['val_acc'], 'o-', label='validation')
-plt.title('Accuracy')
-plt.ylabel('training error')
-plt.xlabel('epoch')
-plt.legend(loc='best')
-plt.show()
 
-plt.figure()
-plt.plot(estimator.history['loss'], 'o-', label='train')
-plt.plot(estimator.history['val_loss'], 'o-', label='validation')
-plt.title('Loss')
-plt.ylabel('training error')
-plt.xlabel('epoch')
-plt.legend(loc='best')
-plt.show()
+with open ('results.csv', 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter = ',')
+    writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
+    for i, num in enumerate(estimator.history['acc']):
+        writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
+print(type(estimator.history['acc']))
+print(estimator.history['acc'])
+print(len(estimator.history['acc']))    
 
-
+plot = False
+if plot is True:
+    plt.figure()
+    plt.plot(estimator.history['acc'], 'o-', label='train')
+    plt.plot(estimator.history['val_acc'], 'o-', label='validation')
+    plt.title('Accuracy')
+    plt.ylabel('training error')
+    plt.xlabel('epoch')
+    plt.legend(loc='best')
+    plt.show()
+    
+    plt.figure()
+    plt.plot(estimator.history['loss'], 'o-', label='train')
+    plt.plot(estimator.history['val_loss'], 'o-', label='validation')
+    plt.title('Loss')
+    plt.ylabel('training error')
+    plt.xlabel('epoch')
+    plt.legend(loc='best')
+    plt.show()
 
 base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
 
@@ -209,7 +221,7 @@ print(np.shape(y_test[:869]))
 print(np.shape(y_pred_keras[:869]))"""
 
 
-test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/Hjortahammar/All'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
 X_test = load_pictures_1(test_dataset)
 y_pred_keras = custom_model.predict(X_test).ravel()
 
