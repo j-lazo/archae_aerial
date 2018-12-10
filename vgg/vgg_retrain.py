@@ -137,21 +137,21 @@ test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=100,
+                                                 batch_size=1000,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 validation_generator = test_datagen.flow_from_directory(validation_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=100,
+                                                 batch_size=1000,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 step_size_train = train_generator.n//train_generator.batch_size
 
 
-nb_validation_samples = 100
+nb_validation_samples = 1000
 batch_size = 20
 
 
@@ -173,9 +173,9 @@ with open ('results.csv', 'w') as csvfile:
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
-print(type(estimator.history['acc']))
-print(estimator.history['acc'])
-print(len(estimator.history['acc']))    
+#print(type(estimator.history['acc']))
+#print(estimator.history['acc'])
+#print(len(estimator.history['acc']))
 
 plot = False
 if plot is True:
@@ -200,13 +200,6 @@ if plot is True:
 base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
 
 
-#print(y_pred_keras)
-
-#with open('Predictions.csv', 'w') as csvfile:
-#    writer = csv.writer(csvfile, delimiter=',')
-#    for i, element in enumerate(y_pred_keras[:200]):
-#        #writer.writerow([element, name_pictures[i]])
-
 
 """print(np.shape(X_test))
 print(type(y_pred_keras))
@@ -224,31 +217,32 @@ print(np.shape(y_pred_keras[:869]))"""
 test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
 X_test = load_pictures_1(test_dataset)
 y_pred_keras = custom_model.predict(X_test).ravel()
-
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test[:200], y_pred_keras[:200])
+print(y_pred_keras)
 y_test = load_labels('Reals.csv')
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test[:200], y_pred_keras[:200])
 
 from sklearn.metrics import auc
 auc_keras = auc(fpr_keras, tpr_keras)
 
-plt.figure()
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve')
-plt.legend(loc='best')
+if plot is True:
+    plt.figure()
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+    #plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.title('ROC curve')
+    plt.legend(loc='best')
 
-# Zoom in view of the upper left corner.
-plt.figure()
-plt.xlim(0, 0.2)
-plt.ylim(0.8, 1)
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve (zoomed in at top left)')
-plt.legend(loc='best')
-plt.show()
+    # Zoom in view of the upper left corner.
+    plt.figure()
+    plt.xlim(0, 0.2)
+    plt.ylim(0.8, 1)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+    #plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.title('ROC curve (zoomed in at top left)')
+    plt.legend(loc='best')
+    plt.show()
