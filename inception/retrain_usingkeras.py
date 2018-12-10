@@ -31,8 +31,12 @@ from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
 import datetime
 
-train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
-validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
+#train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
+#validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
+
+train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
+validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/validation/'
+
 
 def load_labels(csv_file):
     labels = []
@@ -45,7 +49,7 @@ def load_labels(csv_file):
 
 
 def load_pictures_1(directory):
-    directory = directory + '/'
+    directory = directory
     lista = [f for f in os.listdir(directory)]
     imgs = np.zeros([len(lista), 100, 100, 3])
 
@@ -54,14 +58,13 @@ def load_pictures_1(directory):
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i] = img
         else:
-            print(np.shape(img), image)
             img = transform.resize(img, (100, 100, 3))
             imgs[i] = img
 
     array = np.array(imgs)
     array.reshape(len(imgs), 100, 100, 3)
     # return np.array(imgs[:])
-    return array
+    return array, lista
 
 
 def load_pictures(directory):
@@ -156,12 +159,25 @@ estimator = inception_transfer.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
                                        validation_steps=nb_validation_samples // batch_size,
-                                       epochs=15)
+                                       epochs=1)
 
 print(estimator.__dict__.keys())
 
-with open(''.join(['results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
     for i, num in enumerate(estimator.history['acc']):
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
+
+test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/test/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = inception_transfer.predict(X_test)
+
+with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
+
+
