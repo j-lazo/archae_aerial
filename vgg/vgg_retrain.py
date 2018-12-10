@@ -138,21 +138,21 @@ test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=1000,
+                                                 batch_size=400,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 validation_generator = test_datagen.flow_from_directory(validation_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=1000,
+                                                 batch_size=400,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 step_size_train = train_generator.n//train_generator.batch_size
 
 
-nb_validation_samples = 1000
+nb_validation_samples = 200
 batch_size = 20
 
 
