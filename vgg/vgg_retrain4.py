@@ -162,7 +162,7 @@ estimator = custom_model.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
                                        validation_steps=nb_validation_samples // batch_size,
-                                       epochs=50)
+                                       epochs=15)
 
 print(estimator.__dict__.keys())
 
