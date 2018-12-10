@@ -124,7 +124,7 @@ for layer in custom_model.layers[:7]:
 
 adam = Adam(lr=0.001)
 
-# Do not forget to compile it
+
 custom_model.compile(loss='categorical_crossentropy',
                      optimizer=adam,
                      metrics=['accuracy'])
@@ -156,7 +156,7 @@ batch_size = 20
 
 
 custom_model.save_weights('v_gg_weigths', True)
-            
+
 
 estimator = custom_model.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
@@ -175,7 +175,7 @@ with open ('results.csv', 'w') as csvfile:
 
 print(type(estimator.history['acc']))
 print(estimator.history['acc'])
-print(len(estimator.history['acc']))    
+print(len(estimator.history['acc']))
 
 plot = False
 if plot is True:
@@ -187,7 +187,7 @@ if plot is True:
     plt.xlabel('epoch')
     plt.legend(loc='best')
     plt.show()
-    
+
     plt.figure()
     plt.plot(estimator.history['loss'], 'o-', label='train')
     plt.plot(estimator.history['val_loss'], 'o-', label='validation')
