@@ -163,16 +163,12 @@ estimator = custom_model.fit_generator(generator=train_generator,
 
 print(estimator.__dict__.keys())
 
-with open(''.join(['results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['vgg_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
     for i, num in enumerate(estimator.history['acc']):
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
-
-#print(type(estimator.history['acc']))
-#print(estimator.history['acc'])
-#print(len(estimator.history['acc']))
 
 plot = False
 if plot is True:
@@ -194,32 +190,18 @@ if plot is True:
     plt.legend(loc='best')
     plt.show()
 
-base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
+test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/test/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = custom_model.predict(X_test)
+
+with open(''.join(['vgg_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-
-"""print(np.shape(X_test))
-print(type(y_pred_keras))
-print(np.shape(y_pred_keras))
-print(y_pred_keras)
-print('predictions done')
-
-print(np.shape(y_test))
-print(y_test)
-print('before roc')
-print(np.shape(y_test[:869]))
-print(np.shape(y_pred_keras[:869]))"""
-
-
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
-X_test = load_pictures_1(test_dataset)
-y_pred_keras = custom_model.predict(X_test).ravel()
-print(y_pred_keras)
-y_test = load_labels('Reals.csv')
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test[:200], y_pred_keras[:200])
-
-from sklearn.metrics import auc
-auc_keras = auc(fpr_keras, tpr_keras)
 
 if plot is True:
     plt.figure()
