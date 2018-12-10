@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import time
-
+import os
 import keras
 from keras.models import Model, Sequential
 from keras.layers import Dense, Dropout, Flatten, Input, Activation
@@ -38,7 +38,7 @@ def loadImages(N=250):
     def load_labels(fn):
         return np.loadtxt(fn, usecols=0)
 
-    base = "images/"
+    base = os.getcwd()+"/images/"
     trainpic = load_pics(base+"imgTrn/", 1000)
     testpic = load_pics(base + "imgTst/", 1000)
     ntrain, width, height = trainpic.shape
@@ -123,6 +123,7 @@ model.summary()
 
 
 # Now train the model
+
 estimator = model.fit(xtrain, ytrain, 
                       epochs=30, 
                       batch_size=50,

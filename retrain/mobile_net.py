@@ -42,8 +42,10 @@ for layer in model.layers:
 for layer in model.layers[20:]:
     layer.trainable=True"""
 
+adam = Adam(lr=0.001)
+
 train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-#included in our dependencies
+test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(128, 128),
@@ -52,7 +54,15 @@ train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
-model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
+validation_generator = test_datagen.flow_from_directory(validation_data_dir,
+                                                 target_size=(128, 128),
+                                                 color_mode='rgb',
+                                                 batch_size=20,
+                                                 class_mode='categorical',
+                                                  shuffle=True)
+
+
+model.compile(optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy'])
 # Adam optimizer
 # loss function will be categorical cross entropy
 # evaluation metric will be accuracy
@@ -64,9 +74,17 @@ step_size_train = train_generator.n//train_generator.batch_size
 
 model.summary()
 
-estimator = model.fit_generator(generator=train_generator, steps_per_epoch=step_size_train, epochs=10)
 
+nb_validation_samples = 100
+batch_size = 20
+
+estimator = model.fit_generator(generator=train_generator,
+                                       steps_per_epoch=step_size_train,
+                                       validation_data=validation_generator,
+                                       validation_steps=nb_validation_samples // batch_size,
+                                       epochs=15)
 print(estimator.__dict__.keys())
+
 plt.figure()
 plt.plot(estimator.history['acc'], label='train')
 plt.plot(estimator.history['val_acc'], label='validation')
@@ -76,10 +94,8 @@ plt.xlabel('epoch')
 plt.legend(loc='best')
 plt.show()
 
-print(estimator.__dict__)
-print(estimator.history.__dict__.keys())
-
 plt.figure()
+plt.plot(estimator.history['loss'], label='train')
 plt.plot(estimator.history['val_loss'], label='validation')
 plt.title('Loss')
 plt.ylabel('training error')
