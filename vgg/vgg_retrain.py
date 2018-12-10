@@ -24,6 +24,7 @@ from sklearn.model_selection import train_test_split
 from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
+import datetime
 
 train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
 validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
@@ -166,7 +167,7 @@ estimator = custom_model.fit_generator(generator=train_generator,
 
 print(estimator.__dict__.keys())
 
-with open ('results.csv', 'w') as csvfile:
+with open(''.join(['results', str(datetime.datetime.now(), '.csv')]), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter = ',')
     writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
     for i, num in enumerate(estimator.history['acc']):
