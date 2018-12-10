@@ -167,8 +167,8 @@ estimator = custom_model.fit_generator(generator=train_generator,
 
 print(estimator.__dict__.keys())
 
-with open(''.join(['results', str(datetime.datetime.now(), '.csv')]), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter = ',')
+with open(''.join(['results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
     for i, num in enumerate(estimator.history['acc']):
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
