@@ -30,30 +30,6 @@ train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_
 validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
 
 
-input_tensor = Input(shape=(100, 100, 3))
-vgg_model = VGG16(weights='imagenet',
-                               include_top=False,
-                               input_tensor=input_tensor)
-
-# To see the models' architecture and layer names, run the following
-vgg_model.summary()
-
-# Creating dictionary that maps layer names to the layers
-layer_dict = dict([(layer.name, layer) for layer in vgg_model.layers])
-
-# Getting output tensor of the last VGG layer that we want to include
-x = layer_dict['block2_pool'].output
-
-# Stacking a new simple convolutional network on top of it
-x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
-x = MaxPooling2D(pool_size=(2, 2))(x)
-x = Flatten()(x)
-x = Dense(256, activation='relu')(x)
-x = Dropout(0.5)(x)
-x = Dense(2, activation='softmax')(x)
-
-# Creating new model. Please note that this is NOT a Sequential() model.
-
 def load_labels(csv_file):
     labels = []
     with open(csv_file, 'r') as csvfile:
@@ -117,7 +93,27 @@ def load_pictures(directory):
     #return np.array(imgs[:])
     return array, names
 
-custom_model = Model(input=vgg_model.input, output=x)
+input_tensor = Input(shape=(100, 100, 3))
+vgg_model = VGG16(weights='imagenet',
+                               include_top=False,
+                               input_tensor=input_tensor)
+
+# To see the models' architecture and layer names, run the following
+vgg_model.summary()
+
+# Creating dictionary that maps layer names to the layers
+layer_dict = dict([(layer.name, layer) for layer in vgg_model.layers])
+
+# Getting output tensor of the last VGG layer that we want to include
+x = layer_dict['block2_pool'].output
+
+# Stacking a new simple convolutional network on top of it
+x = Dense(512, activation='relu')(x)
+predictions = Dense(2, activation='softmax')(x)
+
+# Creating new model. Please note that this is NOT a Sequential() model.
+
+custom_model = Model(input=vgg_model.input, output=predictions)
 
 # Make sure that the pre-trained bottom layers are not trainable
 for layer in custom_model.layers[:7]:

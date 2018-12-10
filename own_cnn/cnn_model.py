@@ -115,7 +115,7 @@ model.add(Dense(256))
 model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(1))
-model.add(Activation('sigmoid'))
+model.add(Activation('softmax'))
 
 adam = Adam(lr=0.005)
 
