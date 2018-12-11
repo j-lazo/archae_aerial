@@ -33,9 +33,10 @@ import datetime
 
 #train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
 #validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
-
-train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
-validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/validation/'
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/validation/'
+#train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
+#validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/validation/'
 
 
 def load_labels(csv_file):
@@ -134,22 +135,22 @@ test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=400,
+                                                 batch_size=100,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 validation_generator = test_datagen.flow_from_directory(validation_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=400,
+                                                 batch_size=100,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 step_size_train = train_generator.n//train_generator.batch_size
 
 
-nb_validation_samples = 200
-batch_size = 20
+nb_validation_samples = 1000
+batch_size = 100
 
 
 inception_transfer.save_weights('inception_weigths', True)
@@ -159,7 +160,7 @@ estimator = inception_transfer.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
                                        validation_steps=nb_validation_samples // batch_size,
-                                       epochs=1)
+                                       epochs=50)
 
 print(estimator.__dict__.keys())
 
@@ -169,9 +170,9 @@ with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']),
     for i, num in enumerate(estimator.history['acc']):
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
-test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/test/'
-X_test, name_images_test = load_pictures_1(test_dataset)
 
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
+X_test, name_images_test = load_pictures_1(test_dataset)
 tests_results = inception_transfer.predict(X_test)
 
 with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
@@ -180,4 +181,40 @@ with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv
     for i, row in enumerate(tests_results):
         writer.writerow([name_images_test[i], row[0], row[1]])
 
+
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = inception_transfer.predict(X_test)
+
+with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
+
+
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_training/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = inception_transfer.predict(X_test)
+
+with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
+
+
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_validation/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = inception_transfer.predict(X_test)
+
+with open(''.join(['Inception_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
+        
 
