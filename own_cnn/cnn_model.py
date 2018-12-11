@@ -15,8 +15,6 @@ from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 
 
-base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
-
 X, y = make_classification(n_samples=8590)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
 
@@ -113,7 +111,7 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 model.add(Dense(256))
 model.add(Activation('relu'))
-model.add(Dropout(0.5))
+#model.add(Dropout(0.5))
 model.add(Dense(1))
 model.add(Activation('softmax'))
 
@@ -155,78 +153,58 @@ estimator = model.fit_generator(
 
 
 print('here we go... ')
-print(type(validation_generator))
-print(dir(validation_generator))
+
+print(estimator.__dict__.keys())
+
+with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
+    for i, num in enumerate(estimator.history['acc']):
+        writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
-plt.plot(estimator.history['loss'], label='train')
-plt.plot(estimator.history['val_loss'], label='validation')
-plt.title('Loss')
-plt.ylabel('training error')
-plt.xlabel('epoch')
-plt.legend(loc='best')
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+tests_results = inception_transfer.predict(X_test)
 
-plt.figure()
-plt.plot(estimator.history['acc'], label='train')
-plt.plot(estimator.history['val_acc'], label='validation')
-plt.title('Accuracy')
-plt.ylabel('training error')
-plt.xlabel('epoch')
-plt.legend(loc='best')
-
-plt.show()
+with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-#--------------form here it is to predict the roc curve..... --------------------------
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
+X_test, name_images_test = load_pictures_1(test_dataset)
 
-ytrain = load_labels(base + "imgTrn.csv")
-y_test = load_labels(base + "imgVal.csv")
+tests_results = inception_transfer.predict(X_test)
 
-print(len(ytest), len(ytrain))
-X_train = load_pictures(train_data_dir)
-X_test = load_pictures(validation_data_dir)
-
-y_pred_keras = model.predict(X_test).ravel()
-print('predictions')
-print(y_pred_keras)
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred_keras[:4295])
-
-from sklearn.metrics import auc
-auc_keras = auc(fpr_keras, tpr_keras)
-
-from sklearn.ensemble import RandomForestClassifier
+with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-# Supervised transformation based on random forests
-#rf = RandomForestClassifier(max_depth=3, n_estimators=10)
-#print(len(y_train))
-#print(np.shape(X_train))
-#rf.fit(X_train, y_train)
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_training/'
+X_test, name_images_test = load_pictures_1(test_dataset)
+
+tests_results = inception_transfer.predict(X_test)
+
+with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-#y_pred_rf = rf.predict_proba(X_test)[:, 1]
-#fpr_rf, tpr_rf, thresholds_rf = roc_curve(y_test, y_pred_rf)
-#auc_rf = auc(fpr_rf, tpr_rf)
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_validation/'
+X_test, name_images_test = load_pictures_1(test_dataset)
 
+tests_results = inception_transfer.predict(X_test)
 
-plt.figure()
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve')
-plt.legend(loc='best')
-
-# Zoom in view of the upper left corner.
-plt.figure()
-plt.xlim(0, 0.2)
-plt.ylim(0.8, 1)
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve (zoomed in at top left)')
-plt.legend(loc='best')
-plt.show()
+with open(''.join(['Inception_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(['Name', 'Class 1', 'Class 2'])
+    for i, row in enumerate(tests_results):
+        writer.writerow([name_images_test[i], row[0], row[1]])
