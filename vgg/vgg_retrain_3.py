@@ -62,9 +62,8 @@ def load_labels(csv_file):
 
     return labels
 
-
 def load_pictures_1(directory):
-    directory = directory + '/'
+    directory = directory
     lista = [f for f in os.listdir(directory)]
     imgs = np.zeros([len(lista), 100, 100, 3])
 
@@ -73,14 +72,14 @@ def load_pictures_1(directory):
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i] = img
         else:
-            print(np.shape(img), image)
             img = transform.resize(img, (100, 100, 3))
             imgs[i] = img
 
     array = np.array(imgs)
     array.reshape(len(imgs), 100, 100, 3)
     # return np.array(imgs[:])
-    return array
+    return array, lista
+
 
 
 def load_pictures(directory):
@@ -197,58 +196,3 @@ if plot is True:
     plt.legend(loc='best')
     plt.show()
 
-base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/scripts/vgg/'
-
-
-#print(y_pred_keras)
-
-#with open('Predictions.csv', 'w') as csvfile:
-#    writer = csv.writer(csvfile, delimiter=',')
-#    for i, element in enumerate(y_pred_keras[:200]):
-#        #writer.writerow([element, name_pictures[i]])
-
-
-"""print(np.shape(X_test))
-print(type(y_pred_keras))
-print(np.shape(y_pred_keras))
-print(y_pred_keras)
-print('predictions done')
-
-print(np.shape(y_test))
-print(y_test)
-print('before roc')
-print(np.shape(y_test[:869]))
-print(np.shape(y_pred_keras[:869]))"""
-
-
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
-X_test = load_pictures_1(test_dataset)
-y_pred_keras = custom_model.predict(X_test).ravel()
-
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test[:200], y_pred_keras[:200])
-y_test = load_labels('Reals.csv')
-
-from sklearn.metrics import auc
-auc_keras = auc(fpr_keras, tpr_keras)
-
-plt.figure()
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve')
-plt.legend(loc='best')
-
-# Zoom in view of the upper left corner.
-plt.figure()
-plt.xlim(0, 0.2)
-plt.ylim(0.8, 1)
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-#plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve (zoomed in at top left)')
-plt.legend(loc='best')
-plt.show()

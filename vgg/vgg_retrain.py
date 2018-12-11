@@ -41,7 +41,7 @@ def load_labels(csv_file):
 
 
 def load_pictures_1(directory):
-    directory = directory + '/'
+    directory = directory
     lista = [f for f in os.listdir(directory)]
     imgs = np.zeros([len(lista), 100, 100, 3])
 
@@ -50,18 +50,18 @@ def load_pictures_1(directory):
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i] = img
         else:
-            print(np.shape(img), image)
             img = transform.resize(img, (100, 100, 3))
             imgs[i] = img
 
     array = np.array(imgs)
     array.reshape(len(imgs), 100, 100, 3)
     # return np.array(imgs[:])
-    return array
+    return array, lista
+
 
 
 def load_pictures(directory):
-
+predictions
     names = []
     lista1 = [f for f in os.listdir(directory + '/positives/')]
     lista2 = [f for f in os.listdir(directory + '/negatives/')]
@@ -108,9 +108,10 @@ layer_dict = dict([(layer.name, layer) for layer in vgg_model.layers])
 x = layer_dict['block2_pool'].output
 
 # Stacking a new simple convolutional network on top of it
-x = Dense(512, activation='relu')(x)
-predictions = Dense(2, activation='softmax')(x)
+#x = Dense(512, activation='relu')(x)
+x = Dense(2, activation='softmax')(x)
 
+predictions = Dense(2, activation='softmax')(x)
 # Creating new model. Please note that this is NOT a Sequential() model.
 
 custom_model = Model(input=vgg_model.input, output=predictions)
@@ -134,32 +135,48 @@ test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                  target_size=(100, 100),
                                                  color_mode='rgb',
-                                                 batch_size=400,
+                                                 batch_size=200,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 validation_generator = test_datagen.flow_from_directory(validation_data_dir,
-                                                 target_size=(100, 100),
+                                                 target_size=(100, 100),def load_pictures_1(directory):
+    directory = directory
+    lista = [f for f in os.listdir(directory)]
+    imgs = np.zeros([len(lista), 100, 100, 3])
+
+    for i, image in enumerate(lista):
+        img = misc.imread(''.join([directory, image]))
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    # return np.array(imgs[:])
+    return array, lista
+
                                                  color_mode='rgb',
-                                                 batch_size=400,
+                                                 batch_size=200,
                                                  class_mode='categorical',
                                                   shuffle=True)
 
 step_size_train = train_generator.n//train_generator.batch_size
 
 
-nb_validation_samples = 200
-batch_size = 20
+nb_validation_samples = 100
+batch_size = 10
 
 
 custom_model.save_weights('v_gg_weigths', True)
             
-
 estimator = custom_model.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
                                        validation_steps=nb_validation_samples // batch_size,
-                                       epochs=15)
+                                       epochs=100)
 
 print(estimator.__dict__.keys())
 
@@ -170,7 +187,24 @@ with open(''.join(['vgg_results_', str(datetime.datetime.now()), '.csv']), 'w') 
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
-plot = False
+plot = Falsedef load_pictures_1(directory):
+    directory = directory
+    lista = [f for f in os.listdir(directory)]
+    imgs = np.zeros([len(lista), 100, 100, 3])
+
+    for i, image in enumerate(lista):
+        img = misc.imread(''.join([directory, image]))
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    # return np.array(imgs[:])
+    return array, lista
+
 if plot is True:
     plt.figure()
     plt.plot(estimator.history['acc'], 'o-', label='train')
@@ -188,9 +222,26 @@ if plot is True:
     plt.ylabel('training error')
     plt.xlabel('epoch')
     plt.legend(loc='best')
-    plt.show()
+    plt.show()def load_pictures_1(directory):
+    directory = directory
+    lista = [f for f in os.listdir(directory)]
+    imgs = np.zeros([len(lista), 100, 100, 3])
 
-test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/test/'
+    for i, image in enumerate(lista):
+        img = misc.imread(''.join([directory, image]))
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    # return np.array(imgs[:])
+    return array, lista
+
+
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
 X_test, name_images_test = load_pictures_1(test_dataset)
 
 tests_results = custom_model.predict(X_test)
