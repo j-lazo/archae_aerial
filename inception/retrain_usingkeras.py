@@ -30,11 +30,15 @@ from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
 import datetime
+from keras import regularizers
 
 #train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
 #validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
-train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/training/'
-validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/validation/'
+
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/'
+
 #train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
 #validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/validation/'
 
@@ -47,7 +51,6 @@ def load_labels(csv_file):
             labels.append(int(row[0]))
 
     return labels
-
 
 def load_pictures_1(directory):
     directory = directory
@@ -95,7 +98,6 @@ def load_pictures(directory):
             img = transform.resize(img, (100, 100, 3))
             imgs[i + len(lista1)] = img
 
-
     array = np.array(imgs)
     array.reshape(len(imgs), 100, 100, 3)
     #return np.array(imgs[:])
@@ -113,7 +115,7 @@ x = GlobalAveragePooling2D()(x)
 x = Dense(512, activation='relu')(x)
 
 # and a fully connected output/classification layer
-predictions = Dense(2, activation='softmax')(x)
+predictions = Dense(2, activation='softmax', kernel_regularizer=regularizers.l2(0.01))(x)
 
 # create the full network so we can train on it
 inception_transfer = Model(input=inception_base.input, output=predictions)
@@ -171,7 +173,6 @@ with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']),
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
 X_test, name_images_test = load_pictures_1(test_dataset)
 tests_results = inception_transfer.predict(X_test)
 
@@ -184,7 +185,6 @@ with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv
 
 test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
 X_test, name_images_test = load_pictures_1(test_dataset)
-
 tests_results = inception_transfer.predict(X_test)
 
 with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
@@ -194,9 +194,8 @@ with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.
         writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_training/'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_training/'
 X_test, name_images_test = load_pictures_1(test_dataset)
-
 tests_results = inception_transfer.predict(X_test)
 
 with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
@@ -206,9 +205,8 @@ with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()
         writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_validation/'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_validation/'
 X_test, name_images_test = load_pictures_1(test_dataset)
-
 tests_results = inception_transfer.predict(X_test)
 
 with open(''.join(['Inception_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
