@@ -103,116 +103,122 @@ def load_pictures(directory):
     #return np.array(imgs[:])
     return array, names
 
-#import inception with pre-trained weights. do not include fully #connected layers
-inception_base = InceptionV3(weights='imagenet', include_top=False)
-inception_base.summary()
 
-# add a global spatial average pooling layer
-x = inception_base.output
-x = GlobalAveragePooling2D()(x)
+def main(el2=0.01):
 
-# add a fully-connected layer
-x = Dense(512, activation='relu')(x)
+    inception_base = InceptionV3(weights='imagenet', include_top=False)
+    inception_base.summary()
 
-# and a fully connected output/classification layer
-predictions = Dense(2, activation='softmax', kernel_regularizer=regularizers.l2(0.01))(x)
+    # add a global spatial average pooling layer
+    x = inception_base.output
+    x = GlobalAveragePooling2D()(x)
 
-# create the full network so we can train on it
-inception_transfer = Model(input=inception_base.input, output=predictions)
+    # add a fully-connected layer
+    x = Dense(512, activation='relu')(x)
 
-for layer in inception_base.layers:
-    layer.trainable = False
-    
-adam = Adam(lr=0.001)
+    # and a fully connected output/classification layer
+    predictions = Dense(2, activation='softmax', kernel_regularizer=regularizers.l2(el2))(x)
 
-# Do not forget to compile it
-inception_transfer.compile(loss='categorical_crossentropy',
-                     optimizer=adam,
-                     metrics=['accuracy'])
+    # create the full network so we can train on it
+    inception_transfer = Model(input=inception_base.input, output=predictions)
 
-train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-#included in our dependencies
+    for layer in inception_base.layers:
+        layer.trainable = False
 
-train_generator = train_datagen.flow_from_directory(train_data_dir,
-                                                 target_size=(100, 100),
-                                                 color_mode='rgb',
-                                                 batch_size=100,
-                                                 class_mode='categorical',
-                                                  shuffle=True)
+    adam = Adam(lr=0.001)
 
-validation_generator = test_datagen.flow_from_directory(validation_data_dir,
-                                                 target_size=(100, 100),
-                                                 color_mode='rgb',
-                                                 batch_size=100,
-                                                 class_mode='categorical',
-                                                  shuffle=True)
+    # Do not forget to compile it
+    inception_transfer.compile(loss='categorical_crossentropy',
+                         optimizer=adam,
+                         metrics=['accuracy'])
 
-step_size_train = train_generator.n//train_generator.batch_size
+    train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #included in our dependencies
 
+    train_generator = train_datagen.flow_from_directory(train_data_dir,
+                                                     target_size=(100, 100),
+                                                     color_mode='rgb',
+                                                     batch_size=100,
+                                                     class_mode='categorical',
+                                                      shuffle=True)
 
-nb_validation_samples = 1000
-batch_size = 100
+    validation_generator = test_datagen.flow_from_directory(validation_data_dir,
+                                                     target_size=(100, 100),
+                                                     color_mode='rgb',
+                                                     batch_size=100,
+                                                     class_mode='categorical',
+                                                      shuffle=True)
+
+    step_size_train = train_generator.n//train_generator.batch_size
 
 
-inception_transfer.save_weights('inception_weigths', True)
-            
+    nb_validation_samples = 1000
+    batch_size = 100
 
-estimator = inception_transfer.fit_generator(generator=train_generator,
-                                       steps_per_epoch=step_size_train,
-                                       validation_data=validation_generator,
-                                       validation_steps=nb_validation_samples // batch_size,
-                                       epochs=50)
+    today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')
+    inception_transfer.save_weights(''.join(['inception_weigths_', today, '_l2_', str(el2)]), True)
 
-print(estimator.__dict__.keys())
+    estimator = inception_transfer.fit_generator(generator=train_generator,
+                                           steps_per_epoch=step_size_train,
+                                           validation_data=validation_generator,
+                                           validation_steps=nb_validation_samples // batch_size,
+                                           epochs=50)
 
-with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
-    for i, num in enumerate(estimator.history['acc']):
-        writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
+    print(estimator.__dict__.keys())
 
+    with open(''.join(['Inception_results_', today, '_l2_', str(el2),'.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
+        for i, num in enumerate(estimator.history['acc']):
+            writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
-X_test, name_images_test = load_pictures_1(test_dataset)
-tests_results = inception_transfer.predict(X_test)
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
 
-with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Name', 'Class 1', 'Class 2'])
-    for i, row in enumerate(tests_results):
-        writer.writerow([name_images_test[i], row[0], row[1]])
-
-
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
-X_test, name_images_test = load_pictures_1(test_dataset)
-tests_results = inception_transfer.predict(X_test)
-
-with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Name', 'Class 1', 'Class 2'])
-    for i, row in enumerate(tests_results):
-        writer.writerow([name_images_test[i], row[0], row[1]])
+    with open(''.join(['Inception_predictions_', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_training/'
-X_test, name_images_test = load_pictures_1(test_dataset)
-tests_results = inception_transfer.predict(X_test)
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
 
-with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Name', 'Class 1', 'Class 2'])
-    for i, row in enumerate(tests_results):
-        writer.writerow([name_images_test[i], row[0], row[1]])
+    with open(''.join(['Inception_predictions_ALL', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_validation/'
-X_test, name_images_test = load_pictures_1(test_dataset)
-tests_results = inception_transfer.predict(X_test)
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_training/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
 
-with open(''.join(['Inception_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Name', 'Class 1', 'Class 2'])
-    for i, row in enumerate(tests_results):
-        writer.writerow([name_images_test[i], row[0], row[1]])
+    with open(''.join(['Inception_predictions_training', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+
+
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_validation/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
+
+    with open(''.join(['Inception_predictions_validation', today, '_l2_', str(el2), '_.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+
+
+if __name__ == "__main__":
+    L2s = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.15, 0.2, 0.3, 0.5, 0.001, 0.003, 0.005, 0.0 ]
+    for l2 in L2s:
+        main(l2)
         
 
