@@ -3,38 +3,16 @@ import csv
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
 import os
-
-
-def load_predictions(csv_file):
-    labels = []
-    image_name = []
-    with open(csv_file, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            labels.append(row[1])
-
-            image_name.append(row[0])
-    return labels, image_name
-
-
-def load_labels(csv_file):
-    labels = []
-    image_name = []
-    with open(csv_file, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            labels.append(float(row[0]))
-            image_name.append(row[1])
-    return labels, image_name
+import general_functions as gf
 
 
 def main(predicted, real):
 
-    y_results, names = load_predictions(predicted)
-    y_2test, names_test = load_labels(real)
+    y_results, names = gf.load_predictions(predicted)
+    y_2test, names_test = gf.load_labels(real)
 
-    #y_results, names = load_predictions('Inception_predictions.csv')
-    #y_2test, names_test = load_labels('Real_values_test.csv')
+    #y_results, names = gf.load_predictions('Inception_predictions.csv')
+    #y_2test, names_test = gf.load_labels('Real_values_test.csv')
     y_test = []
     y_pred = []
 
@@ -74,6 +52,7 @@ def main(predicted, real):
     plt.title('ROC curve (zoomed in at top left)')
     plt.legend(loc='best')"""
     plt.show()
+
 
 if __name__ == "__main__":
 
