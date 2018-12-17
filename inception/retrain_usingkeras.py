@@ -18,19 +18,15 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
 
 from keras.models import Model
-from keras.optimizers import Adam
-from keras.layers import Input
-from sklearn.metrics import roc_curve
 
 from scipy import misc
-from sklearn.metrics import roc_curve
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
 from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
 import datetime
 from keras import regularizers
+from keras.models import model_from_json
+
 
 #train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
 #validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
@@ -157,7 +153,14 @@ def main(el2=0.01):
     batch_size = 100
 
     today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')
+
+    # Save the weights from the model
     inception_transfer.save_weights(''.join(['inception_weigths_', today, '_l2_', str(el2)]), True)
+
+    # Save the structure of the network in a JSON file
+    model_json = inception_transfer.to_json()
+    with open(''.join(['model_', today, '_l2_', str(el2)]), 'w') as json_file:
+        json_file.write(model_json)
 
     estimator = inception_transfer.fit_generator(generator=train_generator,
                                            steps_per_epoch=step_size_train,
