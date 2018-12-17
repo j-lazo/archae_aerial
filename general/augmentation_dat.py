@@ -6,7 +6,7 @@ import shutil
 from matplotlib import pyplot as plt
 
 print(os.getcwd())
-files_path = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/aerial_photos_plus'
+files_path = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/negatives/'
 f = os.listdir(files_path)
 
 
