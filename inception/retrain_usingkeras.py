@@ -155,11 +155,11 @@ def main(el2=0.01):
     today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')
 
     # Save the weights from the model
-    inception_transfer.save_weights(''.join(['inception_weigths_', today, '_l2_', str(el2)]), True)
+    inception_transfer.save_weights(''.join(['inception_weigths_', today, '_l2_', str(el2), '.h5']), True)
 
     # Save the structure of the network in a JSON file
     model_json = inception_transfer.to_json()
-    with open(''.join(['model_', today, '_l2_', str(el2)]), 'w') as json_file:
+    with open(''.join(['model_', today, '_l2_', str(el2), '.json']), 'w') as json_file:
         json_file.write(model_json)
 
     estimator = inception_transfer.fit_generator(generator=train_generator,
@@ -175,11 +175,54 @@ def main(el2=0.01):
         writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
         for i, num in enumerate(estimator.history['acc']):
             writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
-
+    
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/'
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
     with open(''.join(['Inception_predictions_', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+            
+            
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_1/IR/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
+
+    with open(''.join(['Inception_predictions_original_case IR', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+            
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_1/RGB/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
+
+    with open(''.join(['Inception_predictions_original_case RGB', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+
+
+    test_dataset_island_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/Island/rgb/'
+    X_test, name_images_test = load_pictures_1(test_dataset_island_rgb)
+    tests_results = inception_transfer.predict(X_test)
+
+    with open(''.join(['Inception_predictions_Island_RGB', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name', 'Class 1', 'Class 2'])
+        for i, row in enumerate(tests_results):
+            writer.writerow([name_images_test[i], row[0], row[1]])
+
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/Island/Ir_images/'
+    X_test, name_images_test = load_pictures_1(test_dataset)
+    tests_results = inception_transfer.predict(X_test)
+
+    with open(''.join(['Inception_predictions_Island_IR', today, '_l2_', str(el2), '.csv']), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['Name', 'Class 1', 'Class 2'])
         for i, row in enumerate(tests_results):
@@ -220,7 +263,7 @@ def main(el2=0.01):
 
 
 if __name__ == "__main__":
-    L2s = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.15, 0.2, 0.3, 0.5, 0.001, 0.003, 0.005, 0.0 ]
+    L2s = [0.01]
     for l2 in L2s:
         main(l2)
         
