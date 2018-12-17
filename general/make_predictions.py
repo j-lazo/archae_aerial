@@ -49,7 +49,7 @@ def model():
 def main():
 
     # load json and create model
-    json_file = open('model.json', 'r')
+    json_file = open('model_20181217-11h12m_l2_0.01.json', 'r')
     loaded_model_json = json_file.read()
     json_file.close()
 
@@ -58,14 +58,14 @@ def main():
     # loaded_model = model_from_json()
     # load weights into new model
 
-    file_weights = 'inception_weigths_20181213-18h12m_l2_0.01.h5'
+    file_weights = 'inception_weigths_20181217-11h12m_l2_0.01.h5'
     loaded_model.load_weights(file_weights)
     print("Loaded model from disk")
 
-    file_predictions = 'results/Inception_predictions_20181213-18h12m_l2_0.01.csv'
+    #file_predictions = 'results/Inception_predictions_20181213-18h12m_l2_0.01.csv'
     file_reals = 'real_values/Real_values_test.csv'
-    # test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/'
-    test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/Hjortahammar/All/'
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_1/RGB/'
+    #test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/Hjortahammar/All/'
     # test_dataset = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/Island/Ir_images/'
 
     picture_array, names = gf.load_pictures_1(test_dataset)
@@ -84,8 +84,8 @@ def main():
 
     print(tests_results[:, 0])
 
-    whole_picture = gm.build_map(list_of_images, directory, 15, 18, [y_2test, names_test])
-    cv2.imwrite('Hjortahammar_test.jpg', whole_picture)
+    #whole_picture = gm.build_map(list_of_images, directory, 15, 18, [y_2test, names_test])
+    #cv2.imwrite('Hjortahammar_test.jpg', whole_picture)
 
     # score = loaded_model.evaluate(pictures_totest, results, verbose=1)
     # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
