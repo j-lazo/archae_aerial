@@ -28,7 +28,7 @@ def make_csv_real_values(path, name_output):
         elif folder == 'negatives':
             files_2 = os.listdir(new_path)
 
-    with open(''.join([name_ouput, '.csv']), 'w') as csvfile:
+    with open(''.join([name_output, '.csv']), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['Name Picture', 'Value'])
         for i, row in enumerate(files_1):
