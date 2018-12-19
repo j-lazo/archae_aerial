@@ -27,9 +27,10 @@ def match_reals_and_prediction(file_reals, files_predictions, name_ouput):
     for i, name in enumerate(name_reals):
         for j, other_name in enumerate(names_predictions):
             if name == other_name:
-                common_names.append(other_name)
+                common_names.append(name)
                 list_reals.append(float(reals[i]))
                 list_predictons.append(float(predictions[j]))
+                break
 
     with open(''.join([name_ouput, '.csv']), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
