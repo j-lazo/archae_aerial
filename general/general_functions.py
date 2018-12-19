@@ -30,12 +30,11 @@ def make_csv_real_values(path, name_output):
 
     with open(''.join([name_output, '.csv']), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['Name Picture', 'Value'])
         for i, row in enumerate(files_1):
             writer.writerow([row, 0])
 
         for i, row in enumerate(files_2):
-            writer.writerow([row, ])
+            writer.writerow([row, 1])
 
 
 def match_reals_and_prediction(file_reals, files_predictions, name_ouput):
