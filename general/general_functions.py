@@ -18,6 +18,26 @@ def load_predictions(csv_file):
     return labels, image_name
 
 
+def make_csv_real_values(path, name_output):
+
+    subfolders = os.listdir(path)
+    for folder in subfolders:
+        new_path = ''.join([path, folder, '/'])
+        if folder == 'positives':
+            files_1 = os.listdir(new_path)
+        elif folder == 'negatives':
+            files_2 = os.listdir(new_path)
+
+    with open(''.join([name_ouput, '.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Name Picture', 'Value'])
+        for i, row in enumerate(files_1):
+            writer.writerow([row, 0])
+
+        for i, row in enumerate(files_2):
+            writer.writerow([row, ])
+
+
 def match_reals_and_prediction(file_reals, files_predictions, name_ouput):
     list_reals = []
     list_predictons = []
