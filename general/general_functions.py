@@ -35,7 +35,7 @@ def match_reals_and_prediction(file_reals, files_predictions, name_ouput):
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['Name Picture', 'Real Value', 'Predicted Value'])
         for i, row in enumerate(common_names):
-            writer.writerow(row, list_reals[i], list_predictons[i])
+            writer.writerow([row, list_reals[i], list_predictons[i]])
 
 
 def load_pictures_1(directory):
