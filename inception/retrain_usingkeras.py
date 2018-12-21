@@ -31,8 +31,8 @@ from keras.models import model_from_json
 #train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
 #validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
 
-train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
-validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/validation/'
 test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/'
 
 #train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
@@ -44,9 +44,20 @@ def load_labels(csv_file):
     with open(csv_file, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
-            labels.append(int(row[0]))
+            #labels.append([float(row[0]), float(row[1])])            
+            labels.append(float(row[0]))
 
     return labels
+
+def load_labels_h(csv_file):
+    labels = []
+    with open(csv_file, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            #labels.append([float(row[0]), float(row[1])])            
+            labels.append([float(row[0]), float(row[1])])
+
+    return np.array(labels)
 
 def load_pictures_1(directory):
     directory = directory
@@ -122,27 +133,29 @@ def main(el2=0.01):
         layer.trainable = False
 
     adam = Adam(lr=0.001)
-
+    batch_size = 25
     # Do not forget to compile it
-    inception_transfer.compile(loss='categorical_crossentropy',
+    inception_transfer.compile(loss='binary_crossentropy',
                          optimizer=adam,
                          metrics=['accuracy'])
 
-    train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-    test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+    train_datagen = ImageDataGenerator()
+    test_datagen = ImageDataGenerator()
     #included in our dependencies
 
     train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                      target_size=(100, 100),
                                                      color_mode='rgb',
-                                                     batch_size=100,
+                                                     batch_size=batch_size,
                                                      class_mode='categorical',
                                                       shuffle=True)
 
     validation_generator = test_datagen.flow_from_directory(validation_data_dir,
                                                      target_size=(100, 100),
                                                      color_mode='rgb',
-                                                     batch_size=100,
+                                                     batch_size=batch_size,
                                                      class_mode='categorical',
                                                       shuffle=True)
 
@@ -150,7 +163,7 @@ def main(el2=0.01):
 
 
     nb_validation_samples = 1000
-    batch_size = 100
+    
 
     today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')
 
@@ -162,21 +175,33 @@ def main(el2=0.01):
     with open(''.join(['model_', today, '_l2_', str(el2), '.json']), 'w') as json_file:
         json_file.write(model_json)
 
-    estimator = inception_transfer.fit_generator(generator=train_generator,
+    inception_transfer.fit_generator(generator=train_generator,
                                            steps_per_epoch=step_size_train,
                                            validation_data=validation_generator,
                                            validation_steps=nb_validation_samples // batch_size,
-                                           epochs=50)
+                                           epochs=10)
+                                           
+                                           
+    eval_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos/all/'                                       
+    X_eval, name_images_test = load_pictures_1(eval_dataset)
+    Y_eval = load_labels('/home/william/m18_jorge/Desktop/THESIS/scripts/archae_aerial/general/real_values_all.csv')
+    Y_eval2 = load_labels_h('/home/william/m18_jorge/Desktop/THESIS/scripts/archae_aerial/general/real_values_all.csv')
+    #Y_new = np.array([Y_eval, Y_eval2])
+    #print(Y_new)
 
-    print(estimator.__dict__.keys())
-
-    with open(''.join(['Inception_results_', today, '_l2_', str(el2),'.csv']), 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
-        for i, num in enumerate(estimator.history['acc']):
-            writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
+    eval_1 = inception_transfer.evaluate(X_eval,Y_eval2)
+    print(eval_1)
+    print(inception_transfer.metrics_names)                                  
+   #print(estimator.__dict__.keys())
     
-    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/'
+    """with open(''.join(['Inception_results_', today, '_l2_', str(el2),'.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])preprocess_input
+        for i, num in enumerate(estimator.history['acc']):
+            writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])"""
+    
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/test_dont_touch/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -188,6 +213,7 @@ def main(el2=0.01):
             
             
     test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_1/IR/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -198,6 +224,7 @@ def main(el2=0.01):
             writer.writerow([name_images_test[i], row[0], row[1]])
             
     test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_1/RGB/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -209,6 +236,7 @@ def main(el2=0.01):
 
 
     test_dataset_island_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/Island/rgb/'
+    print(test_dataset_island_rgb)
     X_test, name_images_test = load_pictures_1(test_dataset_island_rgb)
     tests_results = inception_transfer.predict(X_test)
 
@@ -219,6 +247,7 @@ def main(el2=0.01):
             writer.writerow([name_images_test[i], row[0], row[1]])
 
     test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/Island/Ir_images/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -229,7 +258,8 @@ def main(el2=0.01):
             writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/All/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -240,7 +270,8 @@ def main(el2=0.01):
             writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_training/'
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/all_training/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -251,7 +282,8 @@ def main(el2=0.01):
             writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/all_validation/'
+    test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/all_validation/'
+    print(test_dataset)
     X_test, name_images_test = load_pictures_1(test_dataset)
     tests_results = inception_transfer.predict(X_test)
 
@@ -264,6 +296,7 @@ def main(el2=0.01):
 
 if __name__ == "__main__":
     L2s = [0.01]
+    #L2s = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5 ]
     for l2 in L2s:
         main(l2)
         
