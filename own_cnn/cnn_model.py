@@ -13,7 +13,8 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
-
+import csv
+import datetime
 
 X, y = make_classification(n_samples=8590)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
@@ -21,12 +22,12 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
 
 def load_pictures(directory):
 
-    lista1 = [f for f in os.listdir(directory + '/positives/')]
-    lista2 = [f for f in os.listdir(directory + '/negatives/')]
+    lista1 = [f for f in os.listdir(directory + 'positives/')]
+    lista2 = [f for f in os.listdir(directory + 'negatives/')]
     imgs = np.zeros([len(lista1) + len(lista2), 100, 100, 3])
 
     for i, image in enumerate(lista1):
-        img = misc.imread(''.join([directory, '/positives/', image]))
+        img = misc.imread(''.join([directory, 'positives/', image]))
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i] = img
         else:
@@ -34,7 +35,7 @@ def load_pictures(directory):
             imgs[i] = img
 
     for i, image in enumerate(lista2):
-        img = misc.imread(''.join([directory, '/negatives/', image]))
+        img = misc.imread(''.join([directory, 'negatives/', image]))
         if np.array_equal(np.shape(img), (100, 100, 3)):
             imgs[i + len(lista1)] = img
         else:
@@ -56,6 +57,24 @@ def load_labels(csv_file):
             labels.append(row[0])
 
     return labels
+    
+def load_pictures_1(directory):
+    directory = directory
+    lista = [f for f in os.listdir(directory)]
+    imgs = np.zeros([len(lista), 100, 100, 3])
+
+    for i, image in enumerate(lista):
+        img = misc.imread(''.join([directory, image]))
+        if np.array_equal(np.shape(img), (100, 100, 3)):
+            imgs[i] = img
+        else:
+            img = transform.resize(img, (100, 100, 3))
+            imgs[i] = img
+
+    array = np.array(imgs)
+    array.reshape(len(imgs), 100, 100, 3)
+    # return np.array(imgs[:])
+    return array, lista
 
 
 def binary_pred_stats(ytrue, ypred, threshold=0.5):
@@ -78,14 +97,21 @@ def build_model():
 
 # dimensions of our images.
 img_width, img_height = 100, 100
-train_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/training'
-validation_data_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/training_vgg1/validation'
+#train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/training_original_data/training/'
+#validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/training_original_data/validation/'
+
+#train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
+#validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/validation/'
+
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/validation/'
+
 
 #nb_train_samples = 8590
 #nb_validation_samples = 1135
 nb_train_samples = 2000
-nb_validation_samples = 1000
-epochs = 10
+nb_validation_samples = 2000
+epochs = 2
 batch_size = 20
 
 if K.image_data_format() == 'channels_first':
@@ -96,7 +122,11 @@ else:
 ####### is this ok????????????????
 
 model = Sequential()
-model.add(Conv2D(128, (3, 3), input_shape=input_shape))
+model.add(Conv2D(512, (3, 3), input_shape=input_shape))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(256, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
@@ -105,17 +135,45 @@ model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(128, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(256, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Flatten())
 model.add(Dense(256))
 model.add(Activation('relu'))
-#model.add(Dropout(0.5))
-model.add(Dense(1))
+model.add(Dropout(0.5))
+model.add(Dense(2))
 model.add(Activation('softmax'))
 
-adam = Adam(lr=0.005)
+"""model = Sequential()
+model.add(Conv2D(256, (3, 3), input_shape=input_shape))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(128, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(128, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(256, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Flatten())
+model.add(Dense(256))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
+model.add(Dense(2))
+model.add(Activation('softmax'))"""
+
+adam = Adam(lr=0.5)
 
 model.compile(loss='binary_crossentropy',
               optimizer=adam,
@@ -124,25 +182,25 @@ model.compile(loss='binary_crossentropy',
 ##################################
 
 # this is the augmentation configuration we will use for training
-train_datagen = ImageDataGenerator(horizontal_flip=True)
+train_datagen = ImageDataGenerator()
+test_datagen = ImageDataGenerator()
 
-# this is the augmentation configuration we will use for testing:
-# only rescaling
-test_datagen = ImageDataGenerator(rescale=0)
 
 train_generator = train_datagen.flow_from_directory(
     train_data_dir,
     target_size=(img_width, img_height),
     batch_size=batch_size,
-    class_mode='binary')
+    color_mode='rgb', 
+    class_mode='categorical', 
+    shuffle = 'True')                                                     
 
 validation_generator = test_datagen.flow_from_directory(
     validation_data_dir,
     target_size=(img_width, img_height),
     batch_size=batch_size,
-    class_mode='binary')
-
-print(dir(train_generator))
+    color_mode='rgb', 
+    class_mode='categorical', 
+    shuffle = 'True')
 
 estimator = model.fit_generator(
     train_generator,
@@ -156,42 +214,46 @@ print('here we go... ')
 
 print(estimator.__dict__.keys())
 
-with open(''.join(['Inception_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['Own_cnn_results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
     for i, num in enumerate(estimator.history['acc']):
         writer.writerow([num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/test_dont_touch/All/'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/test/'
+#test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_set/UC_aerial/test_UC/'
 X_test, name_images_test = load_pictures_1(test_dataset)
-tests_results = inception_transfer.predict(X_test)
+tests_results = model.predict(X_test[:100], steps=100)
 
-with open(''.join(['Inception_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+for jj, element in enumerate(tests_results):
+    print(element, name_images_test[jj])
+
+with open(''.join(['Own_cnn_predictions_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Name', 'Class 1', 'Class 2'])
     for i, row in enumerate(tests_results):
         writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/aerial_photos_plus/All_images/'
+test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_set/UC_aerial/test_UC/'
 X_test, name_images_test = load_pictures_1(test_dataset)
 
-tests_results = inception_transfer.predict(X_test)
+tests_results = model.predict(X_test)
 
-with open(''.join(['Inception_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['Own_cnn_predictions_ALL', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Name', 'Class 1', 'Class 2'])
     for i, row in enumerate(tests_results):
         writer.writerow([name_images_test[i], row[0], row[1]])
 
 
-test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_training/'
+"""test_dataset = '/home/william/m18_jorge/Desktop/THESIS/DATA/easy_test/all_training/'
 X_test, name_images_test = load_pictures_1(test_dataset)
 
 tests_results = inception_transfer.predict(X_test)
 
-with open(''.join(['Inception_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['Own_cnn_predictions_training', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Name', 'Class 1', 'Class 2'])
     for i, row in enumerate(tests_results):
@@ -203,8 +265,8 @@ X_test, name_images_test = load_pictures_1(test_dataset)
 
 tests_results = inception_transfer.predict(X_test)
 
-with open(''.join(['Inception_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
+with open(''.join(['Own_cnn_predictions_validation', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',')
     writer.writerow(['Name', 'Class 1', 'Class 2'])
     for i, row in enumerate(tests_results):
-        writer.writerow([name_images_test[i], row[0], row[1]])
+        writer.writerow([name_images_test[i], row[0], row[1]])"""
