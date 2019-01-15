@@ -14,7 +14,7 @@ def load_predictions(csv_file):
         for row in reader:
             labels.append(row[1])
 
-            image_name.append(row[0])
+            image_name.append(row[2])
     return labels, image_name
 
 
@@ -77,6 +77,23 @@ def load_pictures_1(directory):
     return array, lista
 
 
+def load_images_with_labels(directory):
+
+    sub_folders = os. listdir(directory)
+    all = []
+    total = 0
+    print(''.join([str(len(sub_folders)), 'classes found: ', '']))
+
+    for folder in sub_folders:
+        files = os.listdir(''.join([directory, '/', folder]))
+        print(''.join([folder, ' ', str(len(files)), ' files']))
+        total = total + len(files)
+        all.append(files)
+    print('total images: ', total)
+    print(len(all))
+    return all
+
+
 def load_labels(csv_file):
     labels = []
     image_name = []
@@ -88,9 +105,60 @@ def load_labels(csv_file):
     return labels, image_name
 
 
+def load_images_with_labels(directory):
+
+    sub_folders = os. listdir(directory)
+    all = []
+    total = 0
+    print(''.join([str(len(sub_folders)), ' classes found: ', '']))
+
+    for folder in sub_folders:
+        files = os.listdir(''.join([directory, '/', folder]))
+        print(''.join([folder, ' ', str(len(files)), ' files']))
+        total = total + len(files)
+        all.append(files)
+    print('total images: ', total)
+
+    return sub_folders, all
+
+
+def create_training_and_validation_list(directory, percentage_training):
+    labels_training = []
+    images_training = []
+    labels_validation = []
+    images_validation = []
+    subfolders, lista = load_images_with_labels(directory)
+    k = [len(i) for i in lista]
+    rate = (min(k)/max(k))
+    while lista[0] or lista[1]:
+
+        if np.random.rand() > rate:
+            if lista[k.index(max(k))]:
+                image = np.random.choice(lista[k.index(max(k))])
+                lista[k.index(max(k))].remove(image)
+                choice = 1
+                img = ''.join([directory, subfolders[k.index(max(k))], '/', image])
+        else:
+            if lista[k.index(min(k))]:
+                image = np.random.choice(lista[k.index(min(k))])
+                lista[k.index(min(k))].remove(image)
+                choice = 0
+                img = ''.join([directory, subfolders[k.index(min(k))], '/', image])
+
+        if np.random.rand() > percentage_training:
+            print('load: ', image, choice)
+            labels_validation.append([image, choice])
+            images_validation.append(cv2.imread(img))
+        else:
+            labels_training.append([image, choice])
+            images_training.append(cv2.imread(img))
+
+    return labels_validation, images_validation, labels_training, images_training
+
+
 def paint_image(image, value):
     im = cv2.imread(image)
-    if value < 0.7:
+    if value > 0.5:
         im[:, :, 1] = 255*value
 
     return im
