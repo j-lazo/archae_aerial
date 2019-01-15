@@ -1,3 +1,4 @@
+
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D
@@ -15,6 +16,10 @@ from skimage import transform
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
 import datetime
+import cv2
+
+
+
 
 X, y = make_classification(n_samples=8590)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
@@ -57,7 +62,59 @@ def load_labels(csv_file):
             labels.append(row[0])
 
     return labels
-    
+
+
+def load_images_with_labels(directory):
+
+    sub_folders = os. listdir(directory)
+    all = []
+    total = 0
+    print(''.join([str(len(sub_folders)), ' classes found: ', '']))
+
+    for folder in sub_folders:
+        files = os.listdir(''.join([directory, '/', folder]))
+        print(''.join([folder, ' ', str(len(files)), ' files']))
+        total = total + len(files)
+        all.append(files)
+    print('total images: ', total)
+
+    return sub_folders, all
+
+
+def create_training_and_validation_list(directory, percentage_training):
+    labels_training = []
+    images_training = []
+    labels_validation = []
+    images_validation = []
+    subfolders, lista = load_images_with_labels(directory)
+    k = [len(i) for i in lista]
+    rate = (min(k)/max(k))
+    while lista[0] or lista[1]:
+
+        if np.random.rand() > rate:
+            if lista[k.index(max(k))]:
+                image = np.random.choice(lista[k.index(max(k))])
+                lista[k.index(max(k))].remove(image)
+                choice = 1
+                img = ''.join([directory, subfolders[k.index(max(k))], '/', image])
+        else:
+            if lista[k.index(min(k))]:
+                image = np.random.choice(lista[k.index(min(k))])
+                lista[k.index(min(k))].remove(image)
+                choice = 0
+                img = ''.join([directory, subfolders[k.index(min(k))], '/', image])
+
+        if np.random.rand() > percentage_training:
+            print('load: ', image, choice)
+            labels_validation.append([image, choice])
+            images_validation.append(cv2.imread(img))
+        else:
+            labels_training.append([image, choice])
+            images_training.append(cv2.imread(img))
+
+    return labels_training, images_training, labels_validation, images_validation
+
+
 def load_pictures_1(directory):
     directory = directory
     lista = [f for f in os.listdir(directory)]
@@ -106,6 +163,11 @@ img_width, img_height = 100, 100
 train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/training/'
 validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/validation/'
 
+all_images_data_dir = ''
+image_dir = '/home/jl/aerial_photos_plus/'
+
+
+training_labels, training_images, validation_labels, validation_images = create_training_and_validation_list(image_dir, 0.75)
 
 #nb_train_samples = 8590
 #nb_validation_samples = 1135
@@ -130,23 +192,23 @@ model.add(Conv2D(256, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Conv2D(128, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Conv2D(128, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Conv2D(128, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Conv2D(128, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Conv2D(256, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Conv2D(256, (3, 3)))
+#model.add(Activation('relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Flatten())
 model.add(Dense(256))
 model.add(Activation('relu'))
 model.add(Dropout(0.5))
-model.add(Dense(2))
+model.add(Dense(1))
 model.add(Activation('softmax'))
 
 """model = Sequential()
@@ -186,7 +248,7 @@ train_datagen = ImageDataGenerator()
 test_datagen = ImageDataGenerator()
 
 
-train_generator = train_datagen.flow_from_directory(
+"""train_generator = train_datagen.flow_from_directory(
     train_data_dir,
     target_size=(img_width, img_height),
     batch_size=batch_size,
@@ -200,14 +262,26 @@ validation_generator = test_datagen.flow_from_directory(
     batch_size=batch_size,
     color_mode='rgb', 
     class_mode='categorical', 
-    shuffle = 'True')
+    shuffle = 'True')"""
 
-estimator = model.fit_generator(
-    train_generator,
-    steps_per_epoch=nb_train_samples // batch_size,
-    epochs=epochs,
-    validation_data=validation_generator,
-    validation_steps=nb_validation_samples // batch_size)
+trng_labels = [label[1] for label in training_labels]
+val_labels = [label[1] for label in validation_labels]
+training_images = np.array(training_images)
+print(np.shape(training_images))
+print(np.shape(training_images[0]))
+validation_images = np.array(validation_images)
+print(np.shape(validation_images))
+estimator =  model.fit(training_images, trng_labels,
+                      batch_size=20,
+                      epochs=epochs,
+                      validation_data=(validation_images, val_labels))
+
+#estimator = model.fit_generator(
+#    train_generator,
+#    steps_per_epoch=nb_train_samples // batch_size,
+#    epochs=epochs,
+#    validation_data=validation_generator,
+#    validation_steps=nb_validation_samples // batch_size)
 
 
 print('here we go... ')
