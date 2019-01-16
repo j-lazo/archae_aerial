@@ -1,172 +1,236 @@
-import tensorflow as tf
-from keras.applications.inception_v3 import InceptionV3
+from keras.models import Sequential
 from keras.models import Model
-from keras.layers import Dense, GlobalAveragePooling2D
-from keras import backend as K
-import pandas as pd
-import numpy as np
-import os
-import keras
-import csv
-import matplotlib.pyplot as plt
-from keras.layers import Dense, GlobalAveragePooling2D
-from keras.applications import VGG16
-from keras.preprocessing import image
-from keras.applications.mobilenet import preprocess_input
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Conv2D, MaxPooling2D
-from keras.layers import Activation, Dropout, Flatten, Dense
-
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.layers import Input
-from sklearn.metrics import roc_curve
-
-from scipy import misc
-from sklearn.metrics import roc_curve
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
-from skimage import transform
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau, TensorBoard
+from keras import optimizers, losses, activations, models
+from keras.layers import Convolution2D, Dense, Input, Flatten, Dropout, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D, Concatenate
+from keras.applications.inception_v3 import preprocess_input
+from keras import applications
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
 import csv
-import datetime
-
-train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/training/'
-validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/trasnfer_learning_training/validation/'
+import numpy as np
+import pandas as pd
+import os
+from sklearn.metrics import roc_curve, auc
+from matplotlib import pyplot as plt
 
 
 def load_labels(csv_file):
     labels = []
+    image_name = []
     with open(csv_file, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
-            labels.append(int(row[0]))
+            labels.append(float(row[0]))
+            image_name.append(row[2])
+    return labels, image_name
+    
 
-    return labels
-
-
-def load_pictures_1(directory):
-    directory = directory + '/'
-    lista = [f for f in os.listdir(directory)]
-    imgs = np.zeros([len(lista), 100, 100, 3])
-
-    for i, image in enumerate(lista):
-        img = misc.imread(''.join([directory, image]))
-        if np.array_equal(np.shape(img), (100, 100, 3)):
-            imgs[i] = img
-        else:
-            print(np.shape(img), image)
-            img = transform.resize(img, (100, 100, 3))
-            imgs[i] = img
-
-    array = np.array(imgs)
-    array.reshape(len(imgs), 100, 100, 3)
-    # return np.array(imgs[:])
-    return array
+def load_predictions(csv_file):
+    labels = []
+    image_name = []
+    with open(csv_file, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            labels.append(row[1])
+            image_name.append(row[2])
+            
+    return labels, image_name
 
 
-def load_pictures(directory):
-    names = []
-    lista1 = [f for f in os.listdir(directory + '/positives/')]
-    lista2 = [f for f in os.listdir(directory + '/negatives/')]
-    imgs = np.zeros([len(lista1) + len(lista2), 100, 100, 3])
 
-    for i, image in enumerate(lista1):
-        img = misc.imread(''.join([directory, '/positives/', image]))
-        names.append(image)
-        if np.array_equal(np.shape(img), (100, 100, 3)):
-            imgs[i] = img
-        else:
-            img = transform.resize(img, (100, 100, 3))
-            imgs[i] = img
+def calculate_auc_and_roc(predicted, real, plot=False):
+    
+    y_results, names = load_predictions(predicted)
+    y_2test, names_test = load_labels(real)
 
-    for i, image in enumerate(lista2):
+    #y_results, names = gf.load_predictions('Inception_predictions.csv')
+    #y_2test, names_test = gf.load_labels('Real_values_test.csv')
+    y_test = []
+    y_pred = []
 
-        img = misc.imread(''.join([directory, '/negatives/', image]))
-        names.append(image)
+    print(len(y_results), len(names))
+    print(len(y_2test), len(names_test))
 
-        if np.array_equal(np.shape(img), (100, 100, 3)):
-            imgs[i + len(lista1)] = img
-        else:
-            img = transform.resize(img, (100, 100, 3))
-            imgs[i + len(lista1)] = img
+    for i, name in enumerate(names):
+        for j, other_name in enumerate(names_test):
+            if name == other_name:
+                y_pred.append(float(y_results[i]))
+                y_test.append(int(y_2test[j]))
 
-    array = np.array(imgs)
-    array.reshape(len(imgs), 100, 100, 3)
-    # return np.array(imgs[:])
-    return array, names
+    print(len(y_pred))
+    print(len(y_test))
+    fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred)
 
-
-# import inception with pre-trained weights. do not include fully #connected layers
-inception_base = InceptionV3(weights='imagenet', include_top=False)
-inception_base.summary()
-
-# add a global spatial average pooling layer
-x = inception_base.output
-x = GlobalAveragePooling2D()(x)
-
-# adding more layers
-
-x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
-x = MaxPooling2D(pool_size=(2, 2))(x)
-x = Flatten()(x)
-x = Dense(256, activation='relu')(x)
-x = Dropout(0.5)(x)
-x = Dense(2, activation='softmax')(x)
+    auc_keras = auc(fpr_keras, tpr_keras)
+     
+    if plot is True:
+        plt.figure()
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+        #plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
+        plt.xlabel('False positive rate')
+        plt.ylabel('True positive rate')
+        plt.title('ROC curve')
+        plt.legend(loc='best')
+    
+    return auc_keras
+        
 
 
-# and a fully connected output/classification layer
-predictions = Dense(2, activation='softmax')(x)
+# ------------------------directories of the datasets -------------------------------
 
-# create the full network so we can train on it
-inception_transfer = Model(input=inception_base.input, output=predictions)
+train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
+validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/validation/'
+#test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_4/rgb/'
+test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/test_dataset_classes/'
 
-for layer in inception_base.layers:
-    layer.trainable = False
+# ---------------------- test with cat and dogs ------------------------------
+
+#train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/training/'
+#validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/validation/'
+#test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/test_with_folders/'
+
+
+# ---------------- load a base model --------------------------
+
+ROWS = 139
+COLS = 139
+
+# --------------------- Image Data Generator-------------------
+train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+
+# ------generators to feed the model----------------
+
+train_gen = train_idg.flow_from_directory(train_data_dir,
+                                          target_size=(ROWS, COLS),
+                                          batch_size = 100)
+
+validation_gen = val_idg.flow_from_directory(validation_data_dir,
+                                          target_size=(ROWS, COLS),
+                                          batch_size = 100)
+                                          
+test_gen = test_idg.flow_from_directory(test_data_dir, 
+                                        target_size=(ROWS, COLS), 
+                                        shuffle=False,
+                                        batch_size = 270)          
+                                        
+# -------------- Load the pretrained model--------------------
+
+input_shape = (ROWS, COLS, 3)
+nclass = len(train_gen.class_indices)
+base_model = applications.InceptionV3(weights='imagenet', 
+                                include_top=False, 
+                                input_shape=(ROWS, COLS,3))
+base_model.trainable = False
+add_model = Sequential()
+add_model.add(base_model)
+add_model.add(GlobalAveragePooling2D())
+add_model.add(Dropout(0.1))
+add_model.add(Dense(1024, activation='relu'))
+
+add_model.add(Dense(nclass, activation='softmax'))
+#add_model.add(Dense(1, activation='softmax'))
+
 
 adam = Adam(lr=0.001)
+sgd = SGD(lr = 0.001, momentum = 0.9)
 
-# Compile
-inception_transfer.compile(loss='categorical_crossentropy',
-                           optimizer=adam,
-                           metrics=['accuracy'])
+model = add_model
+model.compile(loss='categorical_crossentropy', 
+              optimizer=adam,
+              metrics=['accuracy'])
+model.summary()
 
-train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-# included in our dependencies
 
-train_generator = train_datagen.flow_from_directory(train_data_dir,
-                                                    target_size=(100, 100),
-                                                    color_mode='rgb',
-                                                    batch_size=400,
-                                                    class_mode='categorical',
-                                                    shuffle=True)
+  
+                                          
+history = model.fit_generator(train_gen, 
+                              epochs = 5, 
+                              shuffle=1,
+                              steps_per_epoch = 100,
+                              validation_steps = 100,
+                              validation_data = validation_gen, 
+                              verbose=1)
 
-validation_generator = test_datagen.flow_from_directory(validation_data_dir,
-                                                        target_size=(100, 100),
-                                                        color_mode='rgb',
-                                                        batch_size=400,
-                                                        class_mode='categorical',
-                                                        shuffle=True)
+#file_path="weights.best.hdf5"
+#model.load_weights(file_path)
+validation_gen = val_idg.flow_from_directory(validation_data_dir,
+                                          target_size=(ROWS, COLS),
+                                          batch_size = 100)
 
-step_size_train = train_generator.n // train_generator.batch_size
+evaluation = model.evaluate_generator(validation_gen, verbose = True, steps=10)
+print(evaluation)
 
-nb_validation_samples = 200
-batch_size = 20
+evaluation_0 = model.evaluate_generator(test_gen, verbose = True, steps=1)
+print(evaluation_0)
 
-inception_transfer.save_weights('inception_weigths', True)
+###-----------------------lets make predictions-------------------
+predicts = model.predict_generator(test_gen, verbose = True, steps=1)
 
-estimator = inception_transfer.fit_generator(generator=train_generator,
-                                             steps_per_epoch=step_size_train,
-                                             validation_data=validation_generator,
-                                             validation_steps=nb_validation_samples // batch_size,
-                                             epochs=15)
+#print(len(predicts))
+#print(predicts[:270])
+#print('second part')
+#print(predicts[270:])
+x_0 = [x[0] for x in predicts]
+x_1 = [x[1] for x in predicts]
+names = [os.path.basename(x) for x in test_gen.filenames]
+print(len(x_0), len(names))
 
-print(estimator.__dict__.keys())
+predicts = np.argmax(predicts, 
+                     axis=1)
+label_index = {v: k for k,v in train_gen.class_indices.items()}
+predicts = [label_index[p] for p in predicts]
 
-with open(''.join(['results_', str(datetime.datetime.now()), '.csv']), 'w') as csvfile:
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
-    for i, num in enumerate(estimator.history['acc']):
-        writer.writerow(
-            [num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
+df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
+df['fname'] = [os.path.basename(x) for x in test_gen.filenames]
+df['class_1'] = x_0
+df['class_2'] = x_1
+df['over all'] = predicts
+df.to_csv("predictions_test_keras2.csv", index=False)
+
+
+# --------------------more predictions--------------------------
+
+                                          
+val_2_gen = test_idg.flow_from_directory(validation_data_dir, 
+                                        target_size=(ROWS, COLS), 
+                                        shuffle=False,
+                                        batch_size = 2842)          
+                                        
+
+predict2 = model.predict_generator(val_2_gen, verbose = True, steps=1)
+
+#print(len(predicts))
+#print(predicts[:270])
+#print('second part')
+#print(predicts[270:])
+x_0 = [x[0] for x in predict2]
+x_1 = [x[1] for x in predict2]
+names = [os.path.basename(x) for x in val_2_gen.filenames]
+print(len(x_0), len(names))
+
+predict2 = np.argmax(predict2, axis=1)
+label_index = {v: k for k,v in val_2_gen.class_indices.items()}
+predicts2 = [label_index[p] for p in predict2]
+
+df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
+df['fname'] = [os.path.basename(x) for x in val_2_gen.filenames]
+df['class_1'] = x_0
+df['class_2'] = x_1
+df['over all'] = predicts2
+df.to_csv("predictions_val_keras2.csv", index=False)
+
+# -----------now lets calculate the AUC---------------------------------
+
+real_test = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_test.csv'
+to_test = 'predictions_test_keras2.csv'
+auch_0 = calculate_auc_and_roc(to_test, real_test)
+print(auch_0)
+
+real_val = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_validation_plus_Island.csv'
+to_test_validation = 'predictions_val_keras2.csv'
+auch_1 = calculate_auc_and_roc(to_test_validation, real_val)
+print(auch_1)
