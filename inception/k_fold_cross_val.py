@@ -257,18 +257,18 @@ if __name__ == "__main__":
     test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_4/rgb/'
     test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_4/IR/'
     posible_values = [0.1, 0.25, 0.5, 0.75]    
-    shutil.rmtree(initial_dir + 'train_dir')
+    train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
+    shutil.rmtree(train_dir)
     print(folders)
     number_folders = list(np.arange(0, len(folders), 1))
     
     for num, subfolder in enumerate(folders):
         number_folders.remove(number_folders.index(num))
         val_dir = ''.join([initial_dir, subfolder])
-        train_dir = initial_dir + 'train_dir/'
         if not os.path.isdir(train_dir):
             os.mkdir(train_dir)
-        positives_dir = ''.join([initial_dir, 'train_dir/', 'positives']) 
-        negatives_dir = ''.join([initial_dir, 'train_dir/', 'negatives'])        
+        positives_dir = ''.join([train_dir, 'positives']) 
+        negatives_dir = ''.join([train_dir, 'negatives'])        
         if not os.path.isdir(positives_dir):
                 os.mkdir(positives_dir)   
         if not os.path.isdir(negatives_dir):
