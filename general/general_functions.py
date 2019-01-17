@@ -4,6 +4,7 @@ import numpy as np
 import os
 from scipy import misc
 from skimage import transform
+import shutil
 
 
 def load_predictions(csv_file):
@@ -122,6 +123,41 @@ def load_images_with_labels(directory):
     return sub_folders, all
 
 
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def generate_k_sets(directory, k):
+    base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/k_cross_val/'
+    # check sub-folders and images
+    subfolders, lista = load_images_with_labels(directory)
+
+    # determine how many images there are on each folder and the rate of it
+    number_each_class = [len(i) for i in lista]
+    rate = (min(number_each_class) / max(number_each_class))
+
+    # create k sub-folders
+    for number in range(k):
+        ensure_dir('k_'+str(number))
+
+    while lista[0] or lista[1]:
+        if np.random.rand() > rate:
+            folder_choice = max(number_each_class)
+        else:
+            folder_choice = min(number_each_class)
+
+        if lista[folder_choice]:
+            image = np.random.choice(lista[folder_choice])
+            lista[folder_choice].remove(image)
+            img = ''.join([directory, subfolders[folder_choice], '/', image])
+            k_choice = np.random.randint(0, 4)
+            destination = ''.join([base, 'k_', str(k_choice), '/', subfolders[folder_choice], '/', image])
+            ensure_dir(''.join([base, 'k_', str(k_choice), '/', subfolders[folder_choice]]))
+            shutil.move(img, destination)
+
+
 def create_training_and_validation_list(directory, percentage_training):
     labels_training = []
     images_training = []
@@ -162,3 +198,5 @@ def paint_image(image, value):
         im[:, :, 1] = 255*value
 
     return im
+
+
