@@ -129,8 +129,8 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
-def generate_k_sets(directory, k):
-    base = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/k_cross_val/'
+def generate_k_sets(directory, destination, k):
+    base = destination
     # check sub-folders and images
     subfolders, lista = load_images_with_labels(directory)
 
