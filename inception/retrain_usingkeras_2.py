@@ -148,10 +148,10 @@ model.summary()
   
                                           
 history = model.fit_generator(train_gen, 
-                              epochs = 5, 
+                              epochs = 100, 
                               shuffle=1,
-                              steps_per_epoch = 100,
-                              validation_steps = 100,
+                              steps_per_epoch = 50,
+                              validation_steps = 50,
                               validation_data = validation_gen, 
                               verbose=1)
 
