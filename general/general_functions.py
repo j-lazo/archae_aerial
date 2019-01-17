@@ -140,13 +140,13 @@ def generate_k_sets(directory, destination, k):
 
     # create k sub-folders
     for number in range(k):
-        ensure_dir('k_'+str(number))
+        ensure_dir(''.join([destination, '/k_', str(number)]))
 
     while lista[0] or lista[1]:
         if np.random.rand() > rate:
-            folder_choice = max(number_each_class)
+            folder_choice = number_each_class.index(max(number_each_class))
         else:
-            folder_choice = min(number_each_class)
+            folder_choice = number_each_class.index(min(number_each_class))
 
         if lista[folder_choice]:
             image = np.random.choice(lista[folder_choice])
@@ -154,8 +154,9 @@ def generate_k_sets(directory, destination, k):
             img = ''.join([directory, subfolders[folder_choice], '/', image])
             k_choice = np.random.randint(0, 4)
             destination = ''.join([base, 'k_', str(k_choice), '/', subfolders[folder_choice], '/', image])
-            ensure_dir(''.join([base, 'k_', str(k_choice), '/', subfolders[folder_choice]]))
-            shutil.move(img, destination)
+            ensure_dir(''.join([base, 'k_', str(k_choice), '/', subfolders[folder_choice], '/']))
+            print(destination)
+            shutil.copyfile(img, destination)
 
 
 def create_training_and_validation_list(directory, percentage_training):
