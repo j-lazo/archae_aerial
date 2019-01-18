@@ -7,6 +7,7 @@ from keras.layers import Convolution2D, Dense, Input, Flatten, Dropout, MaxPooli
 from keras.applications.inception_v3 import preprocess_input
 from keras import applications
 from keras.optimizers import SGD, Adam, RMSprop, Nadam
+from keras import regularizers
 import csv
 import numpy as np
 import pandas as pd
@@ -140,8 +141,9 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     add_model = Sequential()
     add_model.add(base_model)
     add_model.add(GlobalAveragePooling2D())
-    add_model.add(Dropout(value))
+    #add_model.add(Dropout(value))
     add_model.add(Dense(1024, activation='relu'))
+    add_model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(value)))
     
     add_model.add(Dense(nclass, activation='softmax'))
     #add_model.add(Dense(1, activation='softmax'))
@@ -276,7 +278,7 @@ if __name__ == "__main__":
     folders = os.listdir(initial_dir)
     test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/rgb/'
     test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/IR/'
-    posible_values = [0.1, 0.25, 0.5, 0.75]    
+    posible_values = [0.01, 0.1, 0.5, 0.8]    
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
     if (os.path.isdir(train_dir)):
         shutil.rmtree(train_dir)
