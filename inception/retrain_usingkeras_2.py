@@ -89,7 +89,7 @@ test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_t
 
 #train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/training/'
 #validation_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/validation/'
-#test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cats_dogs/cats_and_dogs/test_with_folders/'
+#test_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/cacalculate_auc_and_rocts_dogs/cats_and_dogs/test_with_folders/'
 
 
 # ---------------- load a base model --------------------------
@@ -148,7 +148,7 @@ model.summary()
   
                                           
 history = model.fit_generator(train_gen, 
-                              epochs = 100, 
+                              epochs = 2, 
                               shuffle=1,
                               steps_per_epoch = 50,
                               validation_steps = 50,

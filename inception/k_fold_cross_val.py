@@ -14,6 +14,7 @@ import os
 from sklearn.metrics import roc_curve, auc
 from matplotlib import pyplot as plt
 import shutil
+import datetime 
 
 def load_labels(csv_file):
     labels = []
@@ -32,7 +33,7 @@ def load_predictions(csv_file):
     with open(csv_file, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
-            labels.append(row[1])
+            labels.append(row[0])
             image_name.append(row[2])
             
     return labels, image_name
@@ -51,7 +52,7 @@ def calculate_auc_and_roc(predicted, real, plot=False):
 
     print(len(y_results), len(names))
     print(len(y_2test), len(names_test))
-
+ 
     for i, name in enumerate(names):
         for j, other_name in enumerate(names_test):
             if name == other_name:
@@ -102,6 +103,7 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
     val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
     test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
     
     # ------generators to feed the model----------------
     
@@ -113,11 +115,18 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
                                           target_size=(ROWS, COLS),
                                           batch_size = 100)
                                           
-    lenv_test1 = len(os.listdir(test_data_dir_2))                                     
-    test_gen = test_idg.flow_from_directory(test_data_dir, 
+    lenv_test1 = len(os.listdir(test_data_dir_1))                                     
+    test_gen = test_idg.flow_from_directory(test_data_dir_1, 
                                         target_size=(ROWS, COLS), 
                                         shuffle=False,
-                                        batch_size = lenv_test1)          
+                                        batch_size = 200)   
+                                        
+    lenv_test2 = len(os.listdir(test_data_dir_2))   
+    print('len', lenv_test2)                                  
+    test_gen2 = test_idg2.flow_from_directory(test_data_dir_2, 
+                                        target_size=(ROWS, COLS), 
+                                        shuffle=False,
+                                        batch_size = 200)   
                                         
     # -------------- Load the pretrained model--------------------
     
@@ -131,7 +140,7 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     add_model = Sequential()
     add_model.add(base_model)
     add_model.add(GlobalAveragePooling2D())
-    add_model.add(Dropout(0.1))
+    add_model.add(Dropout(value))
     add_model.add(Dense(1024, activation='relu'))
     
     add_model.add(Dense(nclass, activation='softmax'))
@@ -157,6 +166,15 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
                               validation_steps = 50,
                               validation_data = validation_gen, 
                               verbose=1)
+    
+    today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')                          
+    model.save_weights(''.join(['weights_incep_',today,'_dropout_',str(value),'_.h5']), True)
+    
+    with open(''.join(['Results_training', today,'_dopout_', str(value), '_.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter = ',' )
+        writer.writerow(['Acc', 'Val_acc', 'Loss', 'Val_Loss'])
+        for i, num in enumerate(history.history['acc']):
+            writer.writerow([num, history.history['val_acc'][i], history.history['loss'][i], history.history['val_loss'][i]])
     
     #file_path="weights.best.hdf5"
     #model.load_weights(file_path)
@@ -192,19 +210,21 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     df['class_1'] = x_0
     df['class_2'] = x_1
     df['over all'] = predicts
-    name_save_predictions_1 = ''.join(['predictions_IR_keras2_', str(value),'_.csv'])    
+    name_save_predictions_1 = ''.join(['predictions_rgb_keras2_', str(value),'_.csv'])   
     df.to_csv(name_save_predictions_1, index=False)
     
+
+
     
     # --------------------more predictions--------------------------
     len_val2 = len(os.listdir(test_data_dir_2))
-    val_2_gen = test_idg.flow_from_directory(validation_data_dir, 
+    val_2_gen = test_idg.flow_from_directory(test_data_dir_2, 
                                         target_size=(ROWS, COLS), 
                                         shuffle=False,
                                         batch_size = len_val2)          
                                         
     
-    predict2 = model.predict_generator(val_2_gen, verbose = True, steps=1)
+    predict2 = model.predict_generator(test_gen2, verbose = True, steps=1)
     
     #print(len(predicts))
     #print(predicts[:270])
@@ -212,30 +232,30 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     #print(predicts[270:])
     x_0 = [x[0] for x in predict2]
     x_1 = [x[1] for x in predict2]
-    names = [os.path.basename(x) for x in val_2_gen.filenames]
+    names = [os.path.basename(x) for x in test_gen2.filenames]
     print(len(x_0), len(names))
     
     predict2 = np.argmax(predict2, axis=1)
-    label_index = {v: k for k,v in val_2_gen.class_indices.items()}
+    label_index = {v: k for k,v in test_gen2.class_indices.items()}
     predicts2 = [label_index[p] for p in predict2]
     
     df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
-    df['fname'] = [os.path.basename(x) for x in val_2_gen.filenames]
+    df['fname'] = [os.path.basename(x) for x in test_gen2.filenames]
     df['class_1'] = x_0
     df['class_2'] = x_1
     df['over all'] = predicts2
-    name_save_predictions_2 = ''.join(['predictions_rgb_keras2_', str(value), '_.csv'])
+    name_save_predictions_2 = ''.join(['predictions_IR_keras2_', str(value), '_.csv'])
     df.to_csv(name_save_predictions_2, index=False)
     
     # -----------now lets calculate the AUC---------------------------------
     
-    real_test = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_IR.csv'
+    real_test = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_rgb.csv'
     auch_0 = calculate_auc_and_roc(name_save_predictions_1, real_test)
-    print(auch_0)
+    print(auch_0, 'RGB')
     
-    real_val = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_rgb.csv'
+    real_val = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_IR.csv'
     auch_1 = calculate_auc_and_roc(name_save_predictions_2, real_val)
-    print(auch_1)
+    print(auch_1, 'IR')
 
 
 def copy_files(initial_dir, final_dir):
@@ -254,11 +274,12 @@ if __name__ == "__main__":
     
     initial_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/k_cross_validation/'
     folders = os.listdir(initial_dir)
-    test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_4/rgb/'
-    test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/other_test_cases/case_4/IR/'
+    test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/rgb/'
+    test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/IR/'
     posible_values = [0.1, 0.25, 0.5, 0.75]    
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
-    shutil.rmtree(train_dir)
+    if (os.path.isdir(train_dir)):
+        shutil.rmtree(train_dir)
     print(folders)
     number_folders = list(np.arange(0, len(folders), 1))
     
@@ -280,6 +301,6 @@ if __name__ == "__main__":
             copy_files(check_folder, train_dir)
                         
         main(train_dir, val_dir, test_dir_rgb, test_dir_ir, posible_values[num])
-        shutil.rmtree(initial_dir + '/train_dir')
-        number_folders = range(0, len(folders))
+        shutil.rmtree(train_dir)
+        number_folders = list(np.arange(0, len(folders), 1))
         
