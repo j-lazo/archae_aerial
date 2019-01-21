@@ -172,7 +172,7 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')                          
     model.save_weights(''.join(['weights_incep_',today,'_dropout_',str(value),'_.h5']), True)
     
-    with open(''.join(['Results_training', today,'_dopout_', str(value), '_.csv']), 'w') as csvfile:
+    with open(''.join(['Results_training', today,'_l2norm_', str(value), '_.csv']), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter = ',' )
         writer.writerow(['Acc', 'Val_acc', 'Loss', 'Val_Loss'])
         for i, num in enumerate(history.history['acc']):
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     folders = os.listdir(initial_dir)
     test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/rgb/'
     test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/IR/'
-    posible_values = [0.01, 0.1, 0.5, 0.8]    
+    posible_values = [0.8, 0.8, 0.8, 0.8]    
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
     if (os.path.isdir(train_dir)):
         shutil.rmtree(train_dir)
