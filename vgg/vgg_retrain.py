@@ -120,9 +120,7 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     # ---------------- load a base model --------------------------
 
     img_width, img_height = 150, 150
-
     top_model_weights_path = 'bottleneck_fc_model.h5'
-
     nb_train_samples = 1000
     nb_validation_samples = 1000
     epochs = 50
@@ -132,39 +130,41 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
 
     # build the VGG16 network
     model = applications.VGG16(include_top=False, weights='imagenet')
-
-    generator = datagen.flow_from_directory(
+    
+    # build generators and build bottlenecks
+    
+    train_generator = datagen.flow_from_directory(
         train_data_dir,
         target_size=(img_width, img_height),
         batch_size=batch_size,
         shuffle=False,
         class_mode=None)
-    bottleneck_features_train = model.predict_generator(generator, nb_train_samples // batch_size)
+    bottleneck_features_train = model.predict_generator(train_generator, nb_train_samples // batch_size)
     np.save('bottleneck_features_train.npy', bottleneck_features_train)
 
-    generator = datagen.flow_from_directory(
+    validation_generator = datagen.flow_from_directory(
         validation_data_dir,
         target_size=(img_width, img_height),
         batch_size=batch_size,
         class_mode=None,
         shuffle=False)
-    bottleneck_features_validation = model.predict_generator(
-        generator, nb_validation_samples // batch_size)
+    bottleneck_features_validation = model.predict_generator(validation_generator, nb_validation_samples // batch_size)
     np.save('bottleneck_features_validation.npy', bottleneck_features_validation)
 
      # -----------here begins the important --------------------------
 
-    save_bottlebeck_features()
+    #save_bottlebeck_features()
     train_data = np.load(open('bottleneck_features_train.npy'))
     train_labels = np.array([0] * (nb_train_samples / 2) + [1] * (nb_train_samples / 2))
     validation_data = np.load(open('bottleneck_features_validation.npy'))
     validation_labels = np.array([0] * (nb_validation_samples / 2) + [1] * (nb_validation_samples / 2))
+    nclass = len(train_gen.class_indices)
 
     model = Sequential()
     model.add(Flatten(input_shape=train_data.shape[1:]))
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(nclass, activation='softmax'))
 
     # optimizers
 
