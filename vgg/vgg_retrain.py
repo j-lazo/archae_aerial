@@ -1,5 +1,6 @@
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
+from keras.applications.vgg16 import preprocess_input
 from keras.models import Sequential
 from keras.layers import Dropout, Flatten, Dense
 from keras import applications
@@ -10,6 +11,33 @@ import datetime
 import os
 import pandas as pd
 import shutil
+from keras.layers import Convolution2D, Dense, Input, Flatten, Dropout, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D, Concatenate
+from sklearn.metrics import roc_curve, auc
+from keras import regularizers
+
+
+def load_labels(csv_file):
+    labels = []
+    image_name = []
+    with open(csv_file, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            labels.append(float(row[1]))
+            image_name.append(row[2])
+    return labels, image_name
+    
+
+def load_predictions(csv_file):
+    labels = []
+    image_name = []
+    with open(csv_file, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            labels.append(row[1])
+            image_name.append(row[2])
+            
+    return labels, image_name
+
 
 
 def copy_files(initial_dir, final_dir):
@@ -43,29 +71,6 @@ def load_pictures_1(directory):
     return array, lista
 
 
-def load_labels(csv_file):
-    labels = []
-    image_name = []
-    with open(csv_file, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            labels.append(float(row[0]))
-            image_name.append(row[2])
-    return labels, image_name
-
-
-def load_predictions(csv_file):
-    labels = []
-    image_name = []
-    with open(csv_file, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            labels.append(row[0])
-            image_name.append(row[2])
-
-    return labels, image_name
-
-
 def calculate_auc_and_roc(predicted, real, plot=False):
     y_results, names = load_predictions(predicted)
     y_2test, names_test = load_labels(real)
@@ -84,8 +89,6 @@ def calculate_auc_and_roc(predicted, real, plot=False):
                 y_pred.append(float(y_results[i]))
                 y_test.append(int(y_2test[j]))
 
-    print(len(y_pred))
-    print(len(y_test))
     fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred)
 
     auc_keras = auc(fpr_keras, tpr_keras)
@@ -103,7 +106,7 @@ def calculate_auc_and_roc(predicted, real, plot=False):
     return auc_keras
 
 
-def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, value=0.1, plot=False):
+def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, value=0.001, idx=0, plot=False):
     # ------------------------directories of the datasets -------------------------------
 
     # train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
@@ -120,50 +123,54 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     # ---------------- load a base model --------------------------
 
     img_width, img_height = 150, 150
-    top_model_weights_path = 'bottleneck_fc_model.h5'
-    nb_train_samples = 1000
-    nb_validation_samples = 1000
-    epochs = 50
-    batch_size = 16
+    ROWS = img_width
+    COLS = img_height
+    
+    train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    
+    #train_idg = ImageDataGenerator()
+    #val_idg = ImageDataGenerator()
+    #test_idg = ImageDataGenerator()
+    #test_idg2 = ImageDataGenerator()
 
-    datagen = ImageDataGenerator(rescale=1. / 255)
+    # ------generators to feed the model----------------
+
+    train_gen = train_idg.flow_from_directory(train_data_dir,
+                                      target_size=(ROWS, COLS),
+                                      batch_size = 100)
+
+    validation_gen = val_idg.flow_from_directory(validation_data_dir,
+                                      target_size=(ROWS, COLS),
+                                      batch_size = 100)
+                                      
+    lenv_test1 = len(os.listdir(test_data_dir_1))                                     
+    test_gen = test_idg.flow_from_directory(test_data_dir_1, 
+                                    target_size=(ROWS, COLS), 
+                                    shuffle=False,
+                                    batch_size = 100)   
+                                    
+    lenv_test2 = len(os.listdir(test_data_dir_2))   
+    test_gen2 = test_idg2.flow_from_directory(test_data_dir_2, 
+                                    target_size=(ROWS, COLS), 
+                                    shuffle=False,
+                                    batch_size = 100)   
 
     # build the VGG16 network
-    model = applications.VGG16(include_top=False, weights='imagenet')
+    base_model = applications.VGG16(include_top=False, weights='imagenet')
+    base_model.summary()
     
-    # build generators and build bottlenecks
-    
-    train_generator = datagen.flow_from_directory(
-        train_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
-        shuffle=False,
-        class_mode=None)
-    bottleneck_features_train = model.predict_generator(train_generator, nb_train_samples // batch_size)
-    np.save('bottleneck_features_train.npy', bottleneck_features_train)
-
-    validation_generator = datagen.flow_from_directory(
-        validation_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
-        class_mode=None,
-        shuffle=False)
-    bottleneck_features_validation = model.predict_generator(validation_generator, nb_validation_samples // batch_size)
-    np.save('bottleneck_features_validation.npy', bottleneck_features_validation)
-
      # -----------here begins the important --------------------------
-
-    #save_bottlebeck_features()
-    train_data = np.load(open('bottleneck_features_train.npy'))
-    train_labels = np.array([0] * (nb_train_samples / 2) + [1] * (nb_train_samples / 2))
-    validation_data = np.load(open('bottleneck_features_validation.npy'))
-    validation_labels = np.array([0] * (nb_validation_samples / 2) + [1] * (nb_validation_samples / 2))
+    base_model.trainable = False
     nclass = len(train_gen.class_indices)
-
-    model = Sequential()
-    model.add(Flatten(input_shape=train_data.shape[1:]))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.5))
+    model = Sequential()    
+    model.add(base_model)
+    model.add(GlobalAveragePooling2D())
+    #model.add(Dense(1024, activation='relu'))
+    #model.add(Dense(2048, activation='relu'))
+    model.add(Dense(512, activation='relu', kernel_regularizer=regularizers.l2(value)))
     model.add(Dense(nclass, activation='softmax'))
 
     # optimizers
@@ -171,17 +178,35 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     adam = Adam(lr=0.001)
     sgd = SGD(lr=0.001, momentum=0.9)
     rms = 'rmsprop'
-    model.compile(optimizer=rms, loss='binary_crossentropy', metrics=['accuracy'])
-
+    model.compile(optimizer=rms, loss='categorical_crossentropy', metrics=['accuracy'])
+    model.summary()
     # train the model
-    estimator = model.fit(train_data, train_labels,
-                          epochs=epochs,
-                          batch_size=batch_size,
-                          validation_data=(validation_data, validation_labels))
+    model.fit_generator(train_gen, 
+                    epochs = 2, 
+                    shuffle=1,
+                    steps_per_epoch = 50,
+                    validation_steps = 50,
+                    validation_data = validation_gen, 
+                    verbose=1)
+    for layer in model.layers[:17]:
+        layer.trainable = False
 
-    model.save_weights(top_model_weights_path)
-    print(estimator.__dict__.keys())
+    for layer in model.layers[17:]:
+        layer.trainable = True
 
+    model.compile(loss='categorical_crossentropy', 
+      optimizer=adam,
+      metrics=['accuracy'])
+     
+
+
+    history = model.fit_generator(train_gen, 
+                epochs = 15, 
+                shuffle=1,
+                steps_per_epoch = 1,
+                validation_steps = 50,
+                validation_data = validation_gen, 
+                verbose=1)
 
     # --------------- evaluate the model -----------------
 
@@ -211,77 +236,127 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     evaluation_1 = model.evaluate_generator(test_gen2, verbose=True, steps=1)
     print(evaluation_1, 'Test dataset IR')
 
-    # --------------- make predictions -------------------
-
-    predicts_1 = model.predict_generator(test_gen, verbose=True, steps=1)
-    predicts_2 = model.predict_generator(test_gen2, verbose=True, steps=1)
-
-    # -------------------save predictions  ------------------------
-    today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')
-    x_0 = [x[0] for x in predicts_1]
-    x_1 = [x[1] for x in predicts_1]
+###-----------------------lets make predictions-------------------
+    predicts = model.predict_generator(test_gen, verbose = True, steps=1)
+    
+    #print(len(predicts))
+    #print(predicts[:270])
+    #print('second part')
+    #print(predicts[270:])
+    x_0 = [x[0] for x in predicts]
+    x_1 = [x[1] for x in predicts]
     names = [os.path.basename(x) for x in test_gen.filenames]
     print(len(x_0), len(names))
-
-    predicts = np.argmax(predicts_1,
-                         axis=1)
-    label_index = {v: k for k, v in test_gen.class_indices.items()}
+    
+    predicts = np.argmax(predicts, 
+                     axis=1)
+    label_index = {v: k for k,v in train_gen.class_indices.items()}
     predicts = [label_index[p] for p in predicts]
-
+    
     df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
     df['fname'] = [os.path.basename(x) for x in test_gen.filenames]
     df['class_1'] = x_0
     df['class_2'] = x_1
     df['over all'] = predicts
-    name_to_save_1 = ''.join(['predictions_vgg_case4_rgb_', today, '_.csv'])
-    df.to_csv(name_to_save_1, index=False)
-
-    # IR
-    x_0 = [x[0] for x in predicts_2]
-    x_1 = [x[1] for x in predicts_2]
+    name_save_predictions_1 = ''.join(['predictions_rgb_VGG_', str(idx), '_', str(value),  '_.csv'])   
+    df.to_csv(name_save_predictions_1, index=False)
+    
+    
+    
+    
+    # --------------------more predictions--------------------------
+    len_val2 = len(os.listdir(test_data_dir_2))
+    val_2_gen = test_idg.flow_from_directory(test_data_dir_2, 
+                                        target_size=(ROWS, COLS), 
+                                        shuffle=False,
+                                        batch_size = len_val2)          
+                                        
+    
+    predict2 = model.predict_generator(test_gen2, verbose = True, steps=1)
+    
+    #print(len(predicts))
+    #print(predicts[:270])
+    #print('second part')
+    #print(predicts[270:])
+    x_0 = [x[0] for x in predict2]
+    x_1 = [x[1] for x in predict2]
     names = [os.path.basename(x) for x in test_gen2.filenames]
     print(len(x_0), len(names))
-
-    predicts = np.argmax(predicts_2,
-                         axis=1)
-    label_index = {v: k for k, v in test_gen.class_indices.items()}
-    predicts = [label_index[p] for p in predicts]
-
+    
+    predict2 = np.argmax(predict2, axis=1)
+    label_index = {v: k for k,v in test_gen2.class_indices.items()}
+    predicts2 = [label_index[p] for p in predict2]
+    
     df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
-    df['fname'] = [os.path.basename(x) for x in test_gen.filenames]
+    df['fname'] = [os.path.basename(x) for x in test_gen2.filenames]
     df['class_1'] = x_0
     df['class_2'] = x_1
-    df['over all'] = predicts
-    name_to_save_2 = ''.join(['predictions_vgg_case4_IR_', today, '_.csv'])
-    df.to_csv(name_to_save_2, index=False)
-
-    # calculate ROC and AUC
-
+    df['over all'] = predicts2
+    name_save_predictions_2 = ''.join(['predictions_IR_VGG_', str(idx), '_', str(value), '_.csv'])
+    df.to_csv(name_save_predictions_2, index=False)
+    
+    # -------------------------predictions on the validation set --------------------------
+    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    va_gen2 = test_idg2.flow_from_directory(validation_data_dir, 
+                                  target_size=(ROWS, COLS), 
+                                   shuffle=False,
+                                   batch_size = 100) 
+                                   
+    predict3 = model.predict_generator(va_gen2, verbose = True, steps=40)
+    
+    #print(len(predicts))
+    #print(predicts[:270])
+    #print('second part')
+    #print(predicts[270:])
+    x_0 = [x[0] for x in predict3]
+    x_1 = [x[1] for x in predict3]
+    names = [os.path.basename(x) for x in va_gen2.filenames[:4000]]
+    print(len(x_0), len(names))
+    
+    predict3 = np.argmax(predict3, axis=1)
+    label_index = {v: k for k,v in va_gen2.class_indices.items()}
+    predict3 = [label_index[p] for p in predict3]
+    
+    df = pd.DataFrame(columns=['class_1', 'class_2', 'fname', 'over all'])
+    df['fname'] = names
+    df['class_1'] = x_0
+    df['class_2'] = x_1
+    df['over all'] = predict3
+    name_save_predictions_3 = ''.join(['predictions_VGG_', '_', str(idx), '_', str(value), '_.csv'])
+    df.to_csv(name_save_predictions_3, index=False)
+    
+    # -----------now lets calculate the AUC---------------------------------
+    
     real_test = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_rgb.csv'
-    to_test = name_to_save_1
-    auch_0 = calculate_auc_and_roc(to_test, real_test)
-    print(auch_0)
-
+    auch_0 = calculate_auc_and_roc(name_save_predictions_1, real_test)
+    print(auch_0, 'RGB')
+    
     real_val = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_case4_IR.csv'
-    to_test_validation = name_to_save_2
-    auch_1 = calculate_auc_and_roc(to_test_validation, real_val)
-    print(auch_1)
+    auch_1 = calculate_auc_and_roc(name_save_predictions_2, real_val)
+    print(auch_1, 'IR')
+    
+    real_val = '/home/william/m18_jorge/Desktop/THESIS/DATA/real_values/Real_values_validation_no_augment.csv'
+    auch_2 = calculate_auc_and_roc(name_save_predictions_3, real_val)
+    print(auch_2, 'validation data')
+  
 
 
 
     # ----------------- save results ---------------------------
 
-    with open(''.join(['vgg_results_', today, '_.csv']), 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['Acc', 'Val_Acc', 'Loss', 'Val_Loss'])
-        for i, num in enumerate(estimator.history['acc']):
-            writer.writerow(
-                [num, estimator.history['val_acc'][i], estimator.history['loss'][i], estimator.history['val_loss'][i]])
+    today = datetime.datetime.strftime(datetime.datetime.today(), '%Y%m%d-%Hh%mm')                          
+    model.save_weights(''.join(['weights_incep_',today,'_dropout_',str(value),'_.h5']), True)
+
+    with open(''.join(['Results_training', today,'_l2norm_', str(value), '_.csv']), 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter = ',' )
+        writer.writerow(['Acc', 'Val_acc', 'Loss', 'Val_Loss'])
+        for i, num in enumerate(history.history['acc']):
+            writer.writerow([num, history.history['val_acc'][i], history.history['loss'][i], history.history['val_loss'][i]])
 
     if plot is True:
         plt.figure()
         """
-        plt.plot([0, 1], [0, 1], 'k--')
+        plt.plot([0, 1], [0, 1], 'k--')real_val
         plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
         # plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
         plt.xlabel('False positive rate')
@@ -305,16 +380,17 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
 
 if __name__ == "__main__":
 
-    initial_dir = '/home/jl/aerial_photos_plus/'
-    folders = os.listdir(initial_dir)
+    #initial_dir = '/home/jl/aerial_photos_plus/'
+    #folders = os.listdir(initial_dir)
+    
     test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/rgb/'
     test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/IR/'
 
-    train_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/training/'
-    val_dir = '/home/jl/MI_BIBLIOTECA/Escuela/Lund/IV/Thesis/test_data_set/transfer_learning/validation/'
+    train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
+    val_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/validation/'
 
-    main(train_dir, val_dir, test_dir_rgb, test_dir_ir)
-
+    num = 0
+    main(train_dir, val_dir, test_dir_rgb, test_dir_ir, num)
 
     """posible_values = [0.1, 0.25, 0.5, 0.75]
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
