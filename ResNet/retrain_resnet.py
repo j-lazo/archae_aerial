@@ -106,7 +106,7 @@ def calculate_auc_and_roc(predicted, real, plot=False):
     return auc_keras
 
 
-def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, value=0.001, idx=0, plot=False):
+def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, idx=0, value=0.001, plot=False):
     # ------------------------directories of the datasets -------------------------------
 
     # train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
@@ -122,19 +122,23 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
 
     # ---------------- load a base model --------------------------
 
-    img_width, img_height = 150, 150
+    img_width, img_height = 224, 224
     ROWS = img_width
     COLS = img_height
     
-    train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    train_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    val_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    test_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     
-    #train_idg = ImageDataGenerator()
-    #val_idg = ImageDataGenerator()
-    #test_idg = ImageDataGenerator()
-    #test_idg2 = ImageDataGenerator()
+    #train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
 
     # ------generators to feed the model----------------
 
@@ -152,25 +156,25 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
                                     shuffle=False,
                                     batch_size = 100)   
                                     
-    lenv_test2 = len(os.listdir(test_data_dir_2))   
     test_gen2 = test_idg2.flow_from_directory(test_data_dir_2, 
                                     target_size=(ROWS, COLS), 
                                     shuffle=False,
                                     batch_size = 100)   
 
-    # build the Resnet50 network
-    base_model = applications.resnet50.ResNet50(include_top=False, weights='imagenet')
-    base_model.summary()
-    
-     # -----------here begins the important --------------------------
+    # build the ResNet50 network
+    base_model = applications.resnet50.ResNet50(include_top=False, weights='imagenet')    
     base_model.trainable = False
+    base_model.summary()
+        
+     # -----------here begins the important --------------------------
     nclass = len(train_gen.class_indices)
     model = Sequential()    
     model.add(base_model)
     model.add(GlobalAveragePooling2D())
-    model.add(Dense(512, activation='relu'))
+    #model.add(Flatten())  
+    model.add(Dense(2048, activation='relu'))
     #model.add(Dense(2048, activation='relu'))
-    #model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(value)))
+    #model.add(Dense(2048, activation='relu', kernel_regularizer=regularizers.l2(value)))
     model.add(Dense(nclass, activation='softmax'))
 
     # optimizers
@@ -178,39 +182,44 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     adam = Adam(lr=0.001)
     sgd = SGD(lr=0.001, momentum=0.9)
     rms = 'rmsprop'
-    model.compile(optimizer=rms, loss='categorical_crossentropy', metrics=['accuracy'])
-    model.summary()
     # train the model
+    
+    model.compile(optimizer=rms, loss='categorical_crossentropy', metrics=['accuracy'])
+    model.summary()    
     model.fit_generator(train_gen, 
-                    epochs = 5, 
+                    epochs = 4, 
                     shuffle=1,
                     steps_per_epoch = 50,
                     validation_steps = 50,
                     validation_data = validation_gen, 
                     verbose=1)
-    for layer in model.layers[:-4]:
+                    
+    for layer in base_model.layers[:-4]:
         layer.trainable = False
 
-    for layer in model.layers[-4:]:
+    for layer in base_model.layers[-4:]:
         layer.trainable = True
+                     
 
     model.compile(loss='categorical_crossentropy', 
       optimizer=adam,
-      metrics=['accuracy'])
+      metrics=['acc'])
      
+    model.summary()
 
 
     history = model.fit_generator(train_gen, 
-                epochs = 15, 
+                epochs = 10, 
                 shuffle=1,
-                steps_per_epoch = 1,
+                steps_per_epoch = 50,
                 validation_steps = 50,
                 validation_data = validation_gen, 
                 verbose=1)
 
     # --------------- evaluate the model -----------------
 
-    val_idg = ImageDataGenerator()
+    val_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     validation_gen = val_idg.flow_from_directory(validation_data_dir,
                                                  target_size=(img_width, img_height),
                                                  batch_size=100)
@@ -218,7 +227,8 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     evaluation = model.evaluate_generator(validation_gen, verbose=True, steps=10)
     print(evaluation, 'Validation dataset')
 
-    test_idg = ImageDataGenerator()
+    test_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     test_gen = test_idg.flow_from_directory(test_data_dir_1,
                                             target_size=(img_width, img_height),
                                             shuffle=False,
@@ -227,7 +237,8 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     evaluation_0 = model.evaluate_generator(test_gen, verbose=True, steps=1)
     print(evaluation_0, 'Test dataset RGB')
 
-    test_idg2 = ImageDataGenerator()
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     test_gen2 = test_idg2.flow_from_directory(test_data_dir_2,
                                               target_size=(img_width, img_height),
                                               shuffle=False,
@@ -292,11 +303,12 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     df['class_1'] = x_0
     df['class_2'] = x_1
     df['over all'] = predicts2
-    name_save_predictions_2 = ''.join(['predictions_IR_Resnet_', str(idx), '_', str(value), '_.csv'])
+    name_save_predictions_2 = ''.join(['predictions_IR_ResNet_', str(idx), '_', str(value), '_.csv'])
     df.to_csv(name_save_predictions_2, index=False)
     
     # -------------------------predictions on the validation set --------------------------
-    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     va_gen2 = test_idg2.flow_from_directory(validation_data_dir, 
                                   target_size=(ROWS, COLS), 
                                    shuffle=False,
@@ -322,7 +334,7 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     df['class_1'] = x_0
     df['class_2'] = x_1
     df['over all'] = predict3
-    name_save_predictions_3 = ''.join(['predictions_Resnet_', '_', str(idx), '_', str(value), '_.csv'])
+    name_save_predictions_3 = ''.join(['predictions_ResNet_', '_', str(idx), '_', str(value), '_.csv'])
     df.to_csv(name_save_predictions_3, index=False)
     
     # -----------now lets calculate the AUC---------------------------------
@@ -389,8 +401,9 @@ if __name__ == "__main__":
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
     val_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/validation/'
 
-    num = 0
-    main(train_dir, val_dir, test_dir_rgb, test_dir_ir, num)
+    indx = 0
+    value = 0
+    main(train_dir, val_dir, test_dir_rgb, test_dir_ir, indx)
 
     """posible_values = [0.1, 0.25, 0.5, 0.75]
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
@@ -420,4 +433,3 @@ if __name__ == "__main__":
         shutil.rmtree(train_dir)
         number_folders = list(np.arange(0, len(folders), 1))"""
 
- 
