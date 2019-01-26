@@ -113,7 +113,7 @@ def calculate_auc_and_roc(predicted, real, plot=False):
     return auc_keras
 
 
-def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, value=0.001, idx=0, plot=False):
+def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, idx=0, value=0.001, plot=False):
     # ------------------------directories of the datasets -------------------------------
 
     # train_data_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/transfer_learning_training/training/'
@@ -133,15 +133,19 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     ROWS = img_width
     COLS = img_height
     
-    train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
-    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    train_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    val_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    test_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     
-    #train_idg = ImageDataGenerator()
-    #val_idg = ImageDataGenerator()
-    #test_idg = ImageDataGenerator()
-    #test_idg2 = ImageDataGenerator()
+    #train_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #val_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #test_idg = ImageDataGenerator(preprocessing_function=preprocess_input)
+    #test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
 
     # ------generators to feed the model----------------
 
@@ -159,25 +163,26 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
                                     shuffle=False,
                                     batch_size = 100)   
                                     
-    lenv_test2 = len(os.listdir(test_data_dir_2))   
     test_gen2 = test_idg2.flow_from_directory(test_data_dir_2, 
                                     target_size=(ROWS, COLS), 
                                     shuffle=False,
                                     batch_size = 100)   
 
     # build the VGG16 network
-    base_model = applications.VGG16(include_top=False, weights='imagenet')
-    base_model.summary()
-    
-     # -----------here begins the important --------------------------
+    base_model = applications.VGG16(include_top=False, weights='imagenet')    
     base_model.trainable = False
+    base_model.summary()
+        
+     # -----------here begins the important --------------------------
     nclass = len(train_gen.class_indices)
     model = Sequential()    
     model.add(base_model)
     model.add(GlobalAveragePooling2D())
-    #model.add(Dense(1024, activation='relu'))
+    #model.add(Flatten())  
     #model.add(Dense(2048, activation='relu'))
-    model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(value)))
+    model.add(Dense(2048, activation='relu'))
+    model.add(Dropout(value))
+    #model.add(Dense(2048, activation='relu', kernel_regularizer=regularizers.l2(value)))
     model.add(Dense(nclass, activation='softmax'))
 
     # optimizers
@@ -185,39 +190,44 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     adam = Adam(lr=0.001)
     sgd = SGD(lr=0.001, momentum=0.9)
     rms = 'rmsprop'
-    model.compile(optimizer=rms, loss='categorical_crossentropy', metrics=['accuracy'])
-    model.summary()
     # train the model
+    
+    model.compile(optimizer=rms, loss='categorical_crossentropy', metrics=['accuracy'])
+    model.summary()    
     model.fit_generator(train_gen, 
-                    epochs = 25, 
+                    epochs = 4, 
                     shuffle=1,
                     steps_per_epoch = 50,
                     validation_steps = 50,
                     validation_data = validation_gen, 
                     verbose=1)
-    for layer in model.layers[:17]:
+                    
+    for layer in base_model.layers[:-4]:
         layer.trainable = False
 
-    for layer in model.layers[17:]:
+    for layer in base_model.layers[-4:]:
         layer.trainable = True
+                     
 
     model.compile(loss='categorical_crossentropy', 
-      optimizer=adam,
-      metrics=['accuracy'])
+      optimizer=sgd,
+      metrics=['acc'])
      
+    model.summary()
 
 
     history = model.fit_generator(train_gen, 
-                epochs = 5, 
+                epochs = 15, 
                 shuffle=1,
-                steps_per_epoch = 1,
+                steps_per_epoch = 50,
                 validation_steps = 50,
                 validation_data = validation_gen, 
                 verbose=1)
 
     # --------------- evaluate the model -----------------
 
-    val_idg = ImageDataGenerator()
+    val_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     validation_gen = val_idg.flow_from_directory(validation_data_dir,
                                                  target_size=(img_width, img_height),
                                                  batch_size=100)
@@ -225,7 +235,8 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     evaluation = model.evaluate_generator(validation_gen, verbose=True, steps=10)
     print(evaluation, 'Validation dataset')
 
-    test_idg = ImageDataGenerator()
+    test_idg = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     test_gen = test_idg.flow_from_directory(test_data_dir_1,
                                             target_size=(img_width, img_height),
                                             shuffle=False,
@@ -234,7 +245,8 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     evaluation_0 = model.evaluate_generator(test_gen, verbose=True, steps=1)
     print(evaluation_0, 'Test dataset RGB')
 
-    test_idg2 = ImageDataGenerator()
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     test_gen2 = test_idg2.flow_from_directory(test_data_dir_2,
                                               target_size=(img_width, img_height),
                                               shuffle=False,
@@ -303,7 +315,8 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
     df.to_csv(name_save_predictions_2, index=False)
     
     # -------------------------predictions on the validation set --------------------------
-    test_idg2 = ImageDataGenerator(preprocessing_function=preprocess_input)
+    test_idg2 = ImageDataGenerator(rescale = 1./255, 
+                                   fill_mode ='nearest')
     va_gen2 = test_idg2.flow_from_directory(validation_data_dir, 
                                   target_size=(ROWS, COLS), 
                                    shuffle=False,
@@ -385,14 +398,16 @@ def main(train_data_dir, validation_data_dir, test_data_dir_1, test_data_dir_2, 
         plt.show()"""
 
 
+
 if __name__ == "__main__":
 
-initial_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/k_cross_validation/'
+    initial_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/k_cross_validation/'
     folders = os.listdir(initial_dir)
     test_dir_rgb = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/rgb/'
     test_dir_ir = '/home/william/m18_jorge/Desktop/THESIS/DATA/case4_test/IR/'
-    posible_values = [[0.8, 0.01, 0.3], [0.4, 1.2, 0.008], [0.1, 0.9, 0.001] , [0.005, 0.5, 1.5]]    
-    #posible_values = [[0.01], [0.01], [0.01] , [0.01]]   # you used this result when you wanted to see the behaviour in general
+    #posible_values = [[256],[1024],[2048],[1500]]
+    #posible_values = [[0.8, 0.01, 0.3], [0.4, 1.2, 0.008], [0.1, 0.9, 0.001] , [0.005, 0.5, 1.5]]    
+    posible_values = [[0.01, 0.8], [0.1, 0.7], [0.05, 0.6] , [0.3, 0.5]]   # you used this result when you wanted to see the behaviour in general
     #posible_values = [[0.08], [0.08], [0.08] , [0.08]]
     train_dir = '/home/william/m18_jorge/Desktop/THESIS/DATA/tem_train/'
     if (os.path.isdir(train_dir)):
